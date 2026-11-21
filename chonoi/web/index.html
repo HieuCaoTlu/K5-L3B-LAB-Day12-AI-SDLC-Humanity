@@ -1242,7 +1242,39 @@ function glow(cx, cy, r, c) {                       // vệt sáng pixel (dither
     if (d <= r && ((x + y + 100) & 1) === 0 && d > r * 0.35) g.fillRect(cx + x, cy + y, 1, 1);
   }
 }
+// ---------- asset PNG của Quán (chonoi/web/assets/quan): tải trước, thiếu/lỗi thì rơi về vẽ khối như cũ ----------
+// PNG xuất gấp 4 lần lưới gốc, nên vẽ về canvas nhỏ với kích thước /4 (không làm mịn) là khớp từng điểm ảnh.
+const AQ = { man: null, img: {} };
+(function loadQuanAssets() {
+  fetch("/assets/quan/manifest.json").then((r) => r.json()).then((m) => {
+    AQ.man = m;
+    m.assets.forEach((a) => { const im = new Image(); im.src = "/assets/quan/" + a.path; AQ.img[a.path] = im; });
+  }).catch(() => {});
+})();
+function qimg(path) { const im = AQ.img[path]; return im && im.complete && im.naturalWidth ? im : null; }
+function qframe(name, ms) {                           // tên frame của hoạt ảnh theo thời gian (ms)
+  const a = AQ.man && AQ.man.animations[name];
+  return a ? a.frames[Math.floor(ms / a.frame_ms) % a.frames.length] : null;
+}
+// vẽ PNG theo tọa độ góc trên trái (khung nhỏ); w,h mặc định = kích thước ảnh / 4. Trả về false nếu chưa có ảnh.
+function qput(path, x, y, w, h) {
+  const im = path && qimg(path); if (!im) return false;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(im, Math.round(x), Math.round(y), w === undefined ? im.naturalWidth / 4 : w, h === undefined ? im.naturalHeight / 4 : h);
+  return true;
+}
+const qnow = () => performance.now();
 function drawWater(t) {
+  const wf = qframe("water", qnow()), wi = wf && qimg(wf);
+  if (wi) {                                            // nước lát gạch 64x64 (3 frame)
+    for (let y = 0; y < LH; y += 64) for (let x = 0; x < LW; x += 64) qput(wf, x, y);
+    const BW2 = GX * U, BH2 = GZ * U;
+    for (let i = 0; i < 40; i++) {
+      const a = i / 40 * 2 * Math.PI;
+      if (Math.sin(t / 40 + i) > 0.6) pxl(PL.foam, MX + BW2 / 2 + Math.cos(a) * (BW2 / 2 + 7), MY + BH2 / 2 + Math.sin(a) * (BH2 / 2 + 7));
+    }
+    return;
+  }
   R(PL.night, 0, 0, LW, LH);
   for (let y = 0; y < LH; y += 4) for (let x = 0; x < LW; x += 4) {
     const o = (Math.floor(t / 20) + (y >> 2)) & 3;
@@ -1259,6 +1291,11 @@ function drawDeck() {
   const BW = GX * U, BH = GZ * U;
   R(PL.rim2, MX - 5, MY - 5, BW + 10, BH + 10);
   R(PL.rim, MX - 4, MY - 4, BW + 8, BH + 8);
+  if (qimg("env/san_xuong.png")) {                   // sàn xuồng 256x160; kích thước khác thì co giãn vào đúng ô
+    qput("env/san_xuong.png", MX, MY, BW, BH);
+    for (let x = 0; x <= BW; x += 32) { R(PL.rim2, MX + x - 2, MY - 7, 4, 5); R(PL.rim, MX + x - 2, MY + BH + 2, 4, 5); }
+    return;
+  }
   for (let y = 0; y < BH; y += 8) {                  // ván gỗ ngang
     R(y / 8 % 2 ? PL.wood1 : "#b07a44", MX, MY + y, BW, 7);
     R(PL.wood3, MX, MY + y + 7, BW, 1);
@@ -1272,6 +1309,7 @@ function drawDeck() {
 function lanternPx(x, y, t) {
   const f = 1 + (Math.sin(t / 15 + x) > 0.8 ? 1 : 0);
   glow(x, y + 4, 14 + f, "rgba(255,200,90,.35)");
+  if (qput(qframe("lantern", qnow() + x * 37), x - 8, y - 9)) return;   // đèn lồng 16x24, hai frame
   R(PL.rim2, x - 1, y - 7, 2, 4);
   R(PL.redD, x - 4, y - 3, 8, 11); R(PL.red, x - 3, y - 3, 6, 10);
   R(PL.glow, x - 1, y, 2, 4); R(PL.rim2, x - 3, y - 3, 6, 1); R(PL.rim2, x - 3, y + 6, 6, 1);
@@ -1280,7 +1318,8 @@ function lanternPx(x, y, t) {
 
 // món ăn 12x7
 function dishIcon(x, y, name) {
-  if (name === "ca_loc_nuong_trui") { R("#d6e0a0", x, y + 1, 12, 5); R("#7c9a52", x + 1, y + 2, 9, 3); R("#2e1a0c", x + 3, y + 3, 1, 1); R("#7c9a52", x + 10, y, 2, 7); R("#3f6b2c", x + 1, y + 6, 10, 1); }
+  if (name && qput("dish/" + name + ".png", x - 2, y - 5, 16, 16)) return;   // sprite món 16x16 (căn giữa ô 12x7 cũ)
+  if (name ==="ca_loc_nuong_trui") { R("#d6e0a0", x, y + 1, 12, 5); R("#7c9a52", x + 1, y + 2, 9, 3); R("#2e1a0c", x + 3, y + 3, 1, 1); R("#7c9a52", x + 10, y, 2, 7); R("#3f6b2c", x + 1, y + 6, 10, 1); }
   else if (name === "goi_bong_sung") { R("#efe6d0", x + 1, y + 2, 10, 5); R("#e8799c", x + 3, y, 6, 3); R("#7bd66b", x + 4, y + 3, 4, 2); }
   else if (name === "lau_ca_linh_dien_dien") { R("#5a3a22", x + 1, y + 3, 10, 4); R("#e8933a", x + 2, y + 2, 8, 2); R("#f2c230", x + 3, y + 2, 2, 1); R("#7bd66b", x + 7, y + 2, 2, 1); R(PL.steam, x + 4, y, 1, 2); R(PL.steam, x + 7, y - 1, 1, 2); }
   else if (name === "canh_chua_ca_loc") { R("#efe6d0", x + 1, y + 3, 10, 4); R("#d6402f", x + 2, y + 2, 8, 2); R("#7bd66b", x + 4, y + 2, 2, 1); R("#e9f2f0", x + 7, y + 2, 1, 1); R(PL.steam, x + 5, y, 1, 2); R(PL.steam, x + 8, y - 1, 1, 2); }
@@ -1306,6 +1345,13 @@ function drawStovePx(st, t) {
     R("#5b8795", x + 14, y + 3, 2, 4); R("#5b8795", x + 14, y + 12, 2, 5); R("#fff", x + 4, y + 1, 3, 1);
     if (s === "cooking") { const k = (t >> 3) & 1; pxl("#7fdcff", x + 8, y + 5 + k); pxl("#7fdcff", x + 7, y + 6 + k); pxl("#7fdcff", x + 9, y + 6 + k); pxl("#7fdcff", x + 8, y + 7 + k); }
     if (s === "ready") { glow(x + 10, y + 5, 13, "rgba(123,214,107,.5)"); R(PL.green, x + 5, y + 12, 8, 2); }
+    return;
+  }
+  const sf = s === "cooking" ? qframe("stove.cooking", qnow()) : s === "ready" ? qframe("stove.ready", qnow()) : "station/bep_idle.png";
+  if (qimg(sf || "")) {                                 // bếp 32x32
+    qput(sf, x - 6, y - 8);
+    if (s === "cooking") qput(qframe("fx.khoi", qnow()), x + 2, y - 20);
+    if (s === "ready") glow(x + 10, y + 4, 13, "rgba(123,214,107,.4)");
     return;
   }
   R(PL.metalD, x, y + 6, 20, 14); R(PL.metal, x + 1, y + 7, 18, 12);
@@ -1381,6 +1427,10 @@ function ordersOf(c) { return c.orders || (c.dish_id ? [{ dish_id: c.dish_id, st
 function drawTablePx(tb, c) {
   const cx = lx(tb.pos[0]), cy = lz(tb.pos[1]);
   R("rgba(0,0,0,.25)", cx - 14, cy + 11, 28, 4);
+  if (qput("station/ban.png", cx - 16, cy - 14)) {                          // bàn + ghế 32x32
+    if (c && c.state === "eating") dishIcon(cx - 6, cy - 4, (ordersOf(c)[0] || {}).dish_id);
+    return;
+  }
   R(PL.rim2, cx - 6, cy + 9, 12, 5);                                       // ghế đẩu phía trước
   R(PL.wood3, cx - 5, cy + 8, 10, 4);
   for (let y = -12; y <= 12; y++) {                                       // mặt bàn tròn
@@ -1444,15 +1494,36 @@ function drawDog(cx, cy, m, kind) {
   else if (m === "an") { R(PL.ink, cx - 3, cy + 7, 6, 2); R("#e8798c", cx - 2, cy + 8, 4, 1); R(PL.ink, cx - 6, cy + 1, 4, 1); R(PL.ink, cx + 2, cy + 1, 4, 1); }
   else R(PL.ink, cx - 3, cy + 8, 6, 1);
 }
-function drawCustomerAt(c, cx, cy, m) {              // một khách ở vị trí bất kỳ (ngồi bàn, trên bè, đang đi)
+const EMOTE = { vui: "ui/emote_vui.png", gian: "ui/emote_gian.png", doi: "ui/emote_doi.png" };
+const SPRITE_NAMES = ["Chó", "Mèo", "Vịt", "Ếch"];       // theo khach_1..4
+const BLOB_NAMES = ["Chó nâu", "Chó xám", "Chiikawa", "Hachiware", "Usagi"];
+function nameTag(label, cx, top, color) {              // bảng tên pixel nhỏ phía trên đầu nhân vật (vẽ ở lớp overlay)
+  ov.push(() => {
+    const w = (label.length * 2.9 + 5) * SC, h = 7 * SC, bx = Math.round(OX + cx * SC - w / 2), by = Math.round(OY + top * SC - h);
+    ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(bx + SC, by + SC, w, h);
+    ctx.fillStyle = "#241410"; ctx.fillRect(bx - SC, by - SC, w + 2 * SC, h + 2 * SC);
+    ctx.fillStyle = color || "#fff3c4"; ctx.fillRect(bx, by, w, h);
+    ptext(label, (bx + w / 2 - OX) / SC, (by + h / 2 - OY) / SC, { size: 4, color: "#4a2b14" });
+  });
+}
+function drawCustomerAt(c, cx, cy, m, hungry) {      // một khách ở vị trí bất kỳ (ngồi bàn, trên bè, đang đi)
   R("rgba(0,0,0,.25)", cx - 9, cy + 18, 18, 3);
+  const n = kindOf(c) % 4 + 1;                          // 4 khách: chó, mèo, vịt, ếch
+  nameTag(c.name || (qimg("customer/khach_" + n + ".png") ? SPRITE_NAMES[n - 1] : BLOB_NAMES[kindOf(c)]), cx, cy - (qimg("customer/khach_" + n + ".png") ? 14 : 12) - 2, "#fff3c4");
+  const cf = m === "an" ? qframe("customer." + n + ".eat", qnow()) : "customer/khach_" + n + (m === "cho" ? "" : "_" + m) + ".png";
+  if (qimg(cf || "")) {                                 // sprite 24x32, chân ở giữa đáy
+    qput(cf, cx - 12, cy - 12);
+    const em = m === "gian" ? "gian" : m === "vui" ? "vui" : hungry ? "doi" : null;
+    if (em) qput(EMOTE[em], cx + 6, cy - 18);
+    return;
+  }
   const kind = kindOf(c);
   if (SPR[kind]) drawBlob(cx, cy, m, SPR[kind]); else drawDog(cx, cy, m, kind);
   if (m === "gian") { R(PL.ink, cx - 12, cy - 12, 1, 1); R("#e5493a", cx - 12, cy - 9, 3, 1); R("#e5493a", cx - 11, cy - 11, 1, 3); }
 }
 function drawCustomerPx(c, tb, ratio, t) {           // khách ngồi sau bàn (vẽ trước bàn)
   const m = moodOf(c, ratio);
-  drawCustomerAt(c, lx(tb.pos[0]), lz(tb.pos[1]) - 25 + (m === "an" && (t >> 3 & 1) ? 1 : 0), m);
+  drawCustomerAt(c, lx(tb.pos[0]), lz(tb.pos[1]) - 25 + (m === "an" ? 0 : 0), m, ratio < 0.6);
 }
 
 // ---------- khách chèo bè vào quán: bè trượt từ ngoài sông tới mạn, khách nhảy lên sàn rồi đi tới bàn ----------
@@ -1465,6 +1536,11 @@ function arrivalOf(c, tb, now) {
 }
 function drawRaft(rx, ry, dir, t, alpha) {
   g.globalAlpha = alpha;
+  if (qimg("env/xuong_khach.png")) {                    // xuồng khách 48x24
+    qput("env/xuong_khach.png", rx - 24, ry - 10);
+    for (let k = 0; k < 5; k++) pxl(PL.foam, rx + dir * (26 + k * 3), ry + 8 + ((k + (t >> 3)) & 1));
+    g.globalAlpha = 1; return;
+  }
   R("rgba(0,0,0,.25)", rx - 12, ry + 4, 26, 3);
   R(PL.rim2, rx - 13, ry - 1, 26, 6);
   for (let i = 0; i < 4; i++) { R(i % 2 ? PL.wood1 : "#b07a44", rx - 12, ry, 24, 1 + (i === 0 ? 0 : 0)); }
@@ -1667,8 +1743,16 @@ function trackPlayer() {
 }
 function drawPlayerPx(p, near, t) {
   const x = lx(p.pos[0]), y = lz(p.pos[1]), moving = performance.now() - pl.lastMove < 120;
-  const yy = drawPerson(x, y, pl.face, moving, t, OUT_SEN);
   const tray = (snap.tray || (snap.hand ? [snap.hand] : [])).map((it) => (typeof it === "string" ? it : it.dish_id));
+  const dirName = { d: "front", u: "back", r: "side", l: "left" }[pl.face] || "front";
+  const pf = qframe("ut_sen." + (tray.length ? "carry_" : "") + (moving ? "walk" : "idle") + "." + dirName, qnow());
+  let yy;
+  if (qimg(pf || "")) {                                  // Út Sen 24x32, chân tại (12,31)
+    R("rgba(0,0,0,.3)", x - 6, y + 1, 12, 3);
+    qput(pf, x - 12, y - 31);
+    yy = y - 31;
+  } else yy = drawPerson(x, y, pl.face, moving, t, OUT_SEN);
+  nameTag("Út Sen", x, y + 12, "#bfe8d8");                // dưới chân, tránh đè phím E / khay
   if (tray.length) {                                  // khay đang bưng
     const bw = tray.length * 13 + 1, bx = Math.round(x - bw / 2);
     R(PL.ink, bx - 1, yy - 12, bw + 2, 11); R("#fffaf0", bx, yy - 11, bw, 9);
@@ -1676,8 +1760,9 @@ function drawPlayerPx(p, near, t) {
   }
   if (near) {                                         // gợi ý phím E
     const ky = yy - (tray.length ? 26 : 14);
-    R(PL.ink, x - 5, ky, 11, 11); R("#fff6d8", x - 4, ky + 1, 9, 8); R("#d9c58a", x - 4, ky + 9, 9, 1);
-    R(PL.ink, x - 2, ky + 2, 1, 6); R(PL.ink, x - 1, ky + 2, 3, 1); R(PL.ink, x - 1, ky + 4, 2, 1); R(PL.ink, x - 1, ky + 7, 3, 1);
+    if (qput("ui/phim_e.png", x - 6, ky - 1)) { /* khung phím E 12x12 */ } else
+    { R(PL.ink, x - 5, ky, 11, 11); R("#fff6d8", x - 4, ky + 1, 9, 8); R("#d9c58a", x - 4, ky + 9, 9, 1);
+    R(PL.ink, x - 2, ky + 2, 1, 6); R(PL.ink, x - 1, ky + 2, 3, 1); R(PL.ink, x - 1, ky + 4, 2, 1); R(PL.ink, x - 1, ky + 7, 3, 1); }
   }
   const r = (snap.meta || {}).interact_radius;        // vòng tương tác (chấm chấm)
   if (r) for (let a = 0; a < 48; a += 2) { const q = a / 48 * 2 * Math.PI; pxl("rgba(255,240,180,.55)", x + Math.cos(q) * r * U, y - 2 + Math.sin(q) * r * U * 0.7); }
@@ -1788,13 +1873,24 @@ const HUD_ICONS = {
 };
 function drawIcon(pat, x, y, color) { pat.forEach((row, j) => { for (let i = 0; i < 8; i++) if (row[i] === "#") pxl(color, x + i, y + j); }); }
 function drawHudLow() {
-  R(PL.rim2, 0, 0, LW, 24); R(PL.rim, 0, 0, LW, 22); R(PL.wood2, 0, 0, LW, 20); R(PL.wood1, 0, 0, LW, 2);
-  for (let x = 0; x < LW; x += 24) R(PL.wood3, x, 2, 1, 18);
-  R(PL.ink, HX + 6, 4, 12, 12); R("#fff6d8", HX + 7, 5, 10, 10); R(PL.ink, HX + 11, 7, 1, 4); R(PL.ink, HX + 11, 10, 3, 1);                      // đồng hồ
-  R(PL.ink, HX + 66, 4, 12, 12); R("#f2c230", HX + 67, 5, 10, 10); R("#ffe27a", HX + 68, 6, 3, 3); R("#b8861a", HX + 71, 8, 1, 5);              // đồng xu
+  const hudImg = qimg("ui/khung_hud.png");
+  if (hudImg) {                                          // khung gỗ 9-slice (lề PNG 16/20/16/20 -> 4/5/4/5 điểm ảnh gốc)
+    const [ml, mt, mr, mb] = (AQ.man && AQ.man.hud_slice) || [16, 20, 16, 20], iw = hudImg.naturalWidth, ih = hudImg.naturalHeight;
+    const dl = ml / 4, dt = mt / 4, dr = mr / 4, db = mb / 4, H = 24;
+    g.imageSmoothingEnabled = false;
+    const xs = [[0, ml, 0, dl], [ml, iw - ml - mr, dl, LW - dl - dr], [iw - mr, mr, LW - dr, dr]];
+    const ys = [[0, mt, 0, dt], [mt, ih - mt - mb, dt, H - dt - db], [ih - mb, mb, H - db, db]];
+    ys.forEach((yy) => xs.forEach((xx) => g.drawImage(hudImg, xx[0], yy[0], xx[1], yy[1], xx[2], yy[2], xx[3], yy[3])));
+  } else {
+    R(PL.rim2, 0, 0, LW, 24); R(PL.rim, 0, 0, LW, 22); R(PL.wood2, 0, 0, LW, 20); R(PL.wood1, 0, 0, LW, 2);
+    for (let x = 0; x < LW; x += 24) R(PL.wood3, x, 2, 1, 18);
+  }
+  if (!qput("ui/dong_ho.png", HX + 6, 4)) { R(PL.ink, HX + 6, 4, 12, 12); R("#fff6d8", HX + 7, 5, 10, 10); R(PL.ink, HX + 11, 7, 1, 4); R(PL.ink, HX + 11, 10, 3, 1); }                      // đồng hồ
+  if (!qput("ui/dong_xu.png", HX + 66, 4)) { R(PL.ink, HX + 66, 4, 12, 12); R("#f2c230", HX + 67, 5, 10, 10); R("#ffe27a", HX + 68, 6, 3, 3); R("#b8861a", HX + 71, 8, 1, 5); }              // đồng xu
   const rep = snap.reputation ?? 0, rmax = (snap.meta || {}).reputation_max || 5;
   for (let i = 0; i < rmax; i++) {                                                                                                               // sao uy tín
     const x = HX + 150 + i * 13, full = rep >= i + 1, half = !full && rep > i + 0.25;
+    if (qimg("ui/sao_uy_tin.png")) { if (half) g.globalAlpha = 0.55; qput(full || half ? "ui/sao_uy_tin.png" : "ui/sao_uy_tin_rong.png", x, 4); g.globalAlpha = 1; continue; }
     R(PL.ink, x, 4, 12, 12); R(full ? "#ffd23f" : half ? "#d9b34a" : "#6e4a2a", x + 1, 5, 10, 10); R(full || half ? "#fff0a0" : "#8a6038", x + 2, 6, 2, 2);
     R(PL.ink, x + 5, 7, 2, 5); R(PL.ink, x + 3, 9, 6, 1);
   }
@@ -1839,7 +1935,13 @@ function hudText() {
     (snap.events || []).forEach((e) => { const m = e.tick >= (snap.tick || 0) - 150 ? toastOf(e) : null, k = e.tick + e.name; if (m && !seen.has(k)) { seen.add(k); msgs.push([m, e.tick]); } });
     msgs.slice(-3).forEach(([m, tk], i) => ptext(m, LW / 2, 29 + i * 9, { size: 6.5, color: (snap.tick || 0) - tk > 110 ? "rgba(255,242,207,.5)" : "#fff2cf" }));
     if (snap.finished) {
-      const cy0 = Math.floor(LH / 2);
+      const cy0 = Math.floor(LH / 2), endImg = qimg("ui/man_ket_thuc.png");
+      if (endImg) {                                      // tranh kết ca 800x450: phủ kín màn hình, tối nhẹ để chữ đọc được
+        const W = LW * SC, H = LH * SC, k = Math.max(W / 800, H / 450);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(endImg, (W - 800 * k) / 2, (H - 450 * k) / 2, 800 * k, 450 * k);
+        ctx.fillStyle = "rgba(10,20,26,.35)"; ctx.fillRect(0, 0, W, H);
+      }
       ctx.fillStyle = "rgba(10,20,26,.7)"; ctx.fillRect(0, (cy0 - 30) * SC, LW * SC, 60 * SC);
       ptext("KẾT CA" + (snap.day !== undefined ? " · NGÀY " + snap.day : ""), LW / 2, cy0 - 20, { size: 14, color: "#ffd23f" });
       ptext((snap.money ?? 0) + "k · uy tín " + (snap.reputation ?? 0).toFixed(1) + " · điểm " + (snap.score ?? 0), LW / 2, cy0 - 2, { size: 7, color: "#fff2cf" });
@@ -2010,7 +2112,8 @@ function updateMenu() {
   bu.style.display = snap.upgrades ? "" : "none";
 
   const isGather = snap.mode !== "quan";
-  const showBar = !isGather || multi || Boolean(snap.upgrades);
+  const showBar = isGather;                      // Quán: HUD + nút nằm trong canvas, không dùng thanh DOM
+  br.style.display = isGather ? "" : "none";
   mb.style.display = showBar ? "flex" : "none";
   cv.style.marginTop = showBar ? "44px" : "0px";
   cv.style.height = showBar ? "calc(100vh - 44px)" : "100vh";
