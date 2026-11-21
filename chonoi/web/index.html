@@ -144,32 +144,363 @@ function overlay(w, h) {
   }
 }
 
+// ----- NỀN PIXEL ART cho gather: buổi sáng, lặn xuống làn nước xanh trong -----
+// CHỈ là hình: vẽ trên canvas nhỏ (PX điểm ảnh / mét) rồi phóng to không làm mịn.
+// Đồng hồ thật và ngẫu nhiên ở đây chỉ dùng cho hoạt ảnh UI, không đi vào sim (headless không chạy file này).
+const PX = 4;        // điểm ảnh nghệ thuật mỗi mét
+const SKY_M = 7;     // số mét trời phía trên mặt nước
+const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+const PAL = {
+  // trên bờ: trời sáng sớm trong, nắng ấm ở chân trời
+  sky: ["#4aa3e8", "#6dbcf0", "#94d0f5", "#bfe4f8", "#e3f4fb", "#fff1d2"],
+  sun: "#fffbe8", sunEdge: "#fff0b8", glow: "#fff6d6",
+  cloudHi: "#ffffff", cloud: "#eef8fd", cloudLo: "#c9e3f2", bird: "#3d5a73",
+  far: "#9fcfb4", farDark: "#84bc9e",
+  wall: "#b98252", wallDark: "#8a5a32", roof: "#d9b56a", roofDark: "#a8843f", stilt: "#6b4a2b", window: "#3b2a1c",
+  nipa: "#3f7d3a", nipaHi: "#6fae55",
+  boat: "#7a4f2b", boatHi: "#a06a3a", hat: "#f0dca0", shirt: "#4f6fa8",
+  wood: "#8b5e34", woodDark: "#5c3a1e", thatch: "#d9b56a", thatchDark: "#a8843f", lamp: "#ffe08a",
+  // dưới nước: xanh ngọc sáng ở mặt -> xanh thẳm ở đáy
+  water: ["#8fe3ea", "#5cc8dc", "#36a9cc", "#2489b8", "#1a6a9e", "#134f80", "#0d3762", "#092647"],
+  surfHi: "#f2feff", surfLo: "#bff1f6", caustic: "rgba(235,255,255,.32)",
+  hazeFar: "rgba(10,52,92,.30)", hazeMid: "rgba(8,38,72,.55)", rimMid: "rgba(120,200,215,.35)",
+  sand: "#6fa9a6", sandHi: "#9fd0c4", sandLo: "#3f7480",
+  rock: "#2e4f66", rockHi: "#4d7790", rockLo: "#1d3447",
+  moss: "#4f9a52", mossHi: "#7cc464",
+  coral: [["#ff6f91", "#ffb3c6"], ["#ff9a4d", "#ffc999"], ["#b07cff", "#d9c2ff"], ["#ffd166", "#fff0b0"], ["#ff5a6e", "#ff9fab"]],
+  sponge: "#c8405e", spongeIn: "#6e1c33", star: "#ff8c42",
+  jar: "#8a5530", jarHi: "#b5774a", jarLo: "#5e3519",
+  kelp: [["#3f8f4f", "#5fb15a"], ["#2f7a52", "#4fa36a"]],
+  bubble: "rgba(235,255,255,.85)", speck: "rgba(220,250,255,.35)", ray: "225,252,255", school: "rgba(12,48,82,.5)",
+  vignette: "rgba(4,20,40,",
+};
+
+function rng32(seed) {  // PRNG có seed: nền giống nhau mỗi lần mở
+  return function () {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function mkCanvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; }
+function hexRgb(hx) { const n = parseInt(hx.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+function px(g, c, x, y, w = 1, h = 1) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+function disc(g, c, cx, cy, r) {
+  g.fillStyle = c;
+  for (let y = -r; y <= r; y++) { const hw = Math.floor(Math.sqrt(r * r - y * y)); g.fillRect(cx - hw, cy + y, hw * 2 + 1, 1); }
+}
+// Dải màu theo chiều dọc: mỗi dải phẳng, chỉ hòa (dither Bayer) ở 40% cuối dải -> kiểu pixel art.
+function ditherBands(g, x0, y0, w, h, colors) {
+  const img = g.createImageData(w, h), cs = colors.map(hexRgb), n = cs.length - 1;
+  for (let y = 0; y < h; y++) {
+    const f = (y / Math.max(1, h - 1)) * n, i = Math.min(n - 1, Math.floor(f));
+    const fr = Math.max(0, Math.min(1, (f - i - 0.6) / 0.4));
+    for (let x = 0; x < w; x++) {
+      const c = fr * 16 > BAYER[(y0 + y) & 3][(x0 + x) & 3] ? cs[i + 1] : cs[i];
+      const o = (y * w + x) * 4;
+      img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
+    }
+  }
+  g.putImageData(img, x0, y0);
+}
+// Dãy đá mờ (bóng) theo profile chiều cao; dùng màu bán trong suốt để "chìm" vào nước.
+function ridge(g, w, baseY, color, hFn, rim) {
+  for (let x = 0; x < w; x++) {
+    const hh = Math.max(0, Math.round(hFn(x)));
+    if (!hh) continue;
+    px(g, color, x, baseY - hh, 1, hh);
+    if (rim) px(g, rim, x, baseY - hh);
+  }
+}
+// San hô nhánh: mọc đệ quy từ gốc, đầu nhánh sáng hơn.
+function coralBranch(g, R, x, y, len, ang, depth, col) {
+  let cx = x, cy = y;
+  for (let i = 0; i < len; i++) {
+    cx += Math.cos(ang); cy -= Math.sin(ang);
+    px(g, col[0], Math.round(cx), Math.round(cy));
+  }
+  if (depth > 0) {
+    coralBranch(g, R, cx, cy, Math.max(2, len - 1 - Math.round(R())), ang + 0.45 + R() * 0.3, depth - 1, col);
+    coralBranch(g, R, cx, cy, Math.max(2, len - 1 - Math.round(R())), ang - 0.45 - R() * 0.3, depth - 1, col);
+  } else {
+    px(g, col[1], Math.round(cx), Math.round(cy) - 1);
+  }
+}
+
+let PB = null;  // bộ đệm các lớp nền (dựng lại khi bounds/bến đổi)
+function pixelBg(meta) {
+  const b = meta.bounds || { x: [0, 100], d: [0, 30] };
+  const dp = meta.dock_pos || [2, 0];
+  const key = JSON.stringify([b, dp]);
+  if (PB && PB.key === key) return PB;
+  const X = b.x[1], D = b.d[1];
+  const W = (X + 4) * PX, H = (SKY_M + D + 1) * PX, S = SKY_M * PX;  // S = hàng điểm ảnh của mặt nước
+  const mx = (x) => Math.round((x + 2) * PX), my = (d) => Math.round((d + SKY_M) * PX);
+  const M = Math.ceil((X / 2) * PX * 0.3) + 4;  // lề cho parallax
+  const WW = W + 2 * M;
+  const R = rng32(20261121);
+
+  // 1. Trời buổi sáng: xanh trong, mặt trời còn thấp, mây trắng, chim
+  const [sky, gs] = mkCanvas(W, S);
+  ditherBands(gs, 0, 0, W, S, PAL.sky);
+  const sunX = Math.round(W * 0.72), sunY = 9;
+  for (let y = -13; y <= 13; y++) for (let x = -13; x <= 13; x++) {
+    const r2 = x * x + y * y;
+    const fade = 1 - (Math.sqrt(r2) - 7) / 6;   // quầng sáng thưa dần ra ngoài (dither)
+    if (r2 > 49 && fade > 0 && BAYER[(y + 16) & 3][(x + 16) & 3] < fade * 9) px(gs, PAL.glow, sunX + x, sunY + y);
+  }
+  disc(gs, PAL.sunEdge, sunX, sunY, 7); disc(gs, PAL.sun, sunX, sunY, 5);
+  for (let i = 0; i < 7; i++) {
+    const cx = Math.round(R() * W), cy = 4 + Math.round(R() * S * 0.45), len = 14 + Math.round(R() * 18);
+    disc(gs, PAL.cloud, cx + Math.round(len * 0.3), cy, 3);
+    disc(gs, PAL.cloudHi, cx + Math.round(len * 0.55), cy - 1, 4);
+    disc(gs, PAL.cloud, cx + Math.round(len * 0.8), cy + 1, 2);
+    px(gs, PAL.cloud, cx, cy + 1, len, 3);
+    px(gs, PAL.cloudLo, cx + 1, cy + 4, len - 2, 1);
+  }
+  for (let i = 0; i < 4; i++) {
+    const bx = Math.round(W * (0.25 + R() * 0.4)), by = 4 + Math.round(R() * 8);
+    [[0, 0], [1, -1], [2, 0], [3, -1], [4, 0]].forEach(([dx, dy]) => px(gs, PAL.bird, bx + dx, by + dy));
+  }
+
+  // 2. Lớp xa trên bờ: hàng cây và dừa mờ trong sương sớm (parallax chậm)
+  const [far, gf] = mkCanvas(WW, S);
+  ridge(gf, WW, S, PAL.far, (x) => 5 + 2.5 * Math.sin(x * 0.045) + 1.8 * Math.sin(x * 0.11 + 2) + R() * 1.2);
+  for (let x0 = 10; x0 < WW; x0 += 22 + Math.round(R() * 26)) {
+    const ht = 14 + Math.round(R() * 8), lean = R() < 0.5 ? -1 : 1;
+    let tx = x0, ty = S;
+    for (let k = 0; k < ht; k++) { tx = x0 + Math.round(Math.sin((k / ht) * 1.2) * lean * 3); ty = S - 3 - k; px(gf, PAL.farDark, tx, ty); }
+    [[-1, 0.2], [1, 0.2], [-0.8, -0.5], [0.8, -0.5], [-0.3, -0.9], [0.4, -0.8]].forEach(([dx, dy]) => {
+      for (let j = 1; j <= 6; j++) px(gf, PAL.farDark, tx + Math.round(dx * j), ty + Math.round(dy * j + j * j * 0.09));
+    });
+  }
+
+  // 3. Lớp giữa trên bờ: nhà sàn gỗ mái lá, dừa nước, ghe người đội nón lá (parallax vừa)
+  const [mid, gm] = mkCanvas(WW, S);
+  for (let i = 0; i < 4; i++) {
+    const x0 = M + Math.round(W * (0.2 + i * 0.21 + R() * 0.05)), hw = 14 + Math.round(R() * 6), hh = 7 + Math.round(R() * 3);
+    const fy = S - 4;
+    for (let x = x0; x <= x0 + hw; x += 4) px(gm, PAL.stilt, x, fy, 1, 5);
+    px(gm, PAL.wallDark, x0 - 1, fy - 1, hw + 3, 1);
+    px(gm, PAL.wall, x0, fy - 1 - hh, hw + 1, hh);
+    for (let x = x0 + 2; x < x0 + hw; x += 3) px(gm, PAL.wallDark, x, fy - hh, 1, hh - 1);
+    for (let r = 0; r < 6; r++) px(gm, r % 2 ? PAL.roofDark : PAL.roof, x0 - 3 + r, fy - 2 - hh - r, hw + 7 - 2 * r, 1);
+    px(gm, PAL.window, x0 + 3, fy - hh + 1, 3, 2);
+    px(gm, PAL.window, x0 + hw - 4, fy - hh + 2, 2, hh - 3);
+  }
+  for (let i = 0; i < 10; i++) {
+    const bx = Math.round(R() * WW), n = 5 + Math.round(R() * 3);
+    for (let f = 0; f < n; f++) {
+      const a = Math.PI * (1.15 + (f / (n - 1)) * 0.7), len = 6 + Math.round(R() * 6);
+      for (let j = 1; j <= len; j++) {
+        const fx = bx + Math.round(Math.cos(a) * j), fy = S + Math.round(Math.sin(a) * j + j * j * 0.05);
+        px(gm, j % 3 === 0 ? PAL.nipaHi : PAL.nipa, fx, fy);
+      }
+    }
+  }
+  const gx = M + Math.round(W * 0.56);
+  px(gm, PAL.boatHi, gx, S - 2, 18, 1); px(gm, PAL.boat, gx + 2, S - 1, 14, 1);
+  px(gm, PAL.boat, gx - 1, S - 3); px(gm, PAL.boat, gx + 18, S - 3);
+  px(gm, PAL.shirt, gx + 8, S - 6, 2, 4);
+  px(gm, PAL.hat, gx + 6, S - 7, 6, 1); px(gm, PAL.hat, gx + 7, S - 8, 4, 1); px(gm, PAL.hat, gx + 8, S - 9, 2, 1);
+  for (let k = 0; k < 6; k++) px(gm, PAL.woodDark, gx + 11 + k, S - 6 + k);
+
+  // 4. Nước: dải xanh ngọc -> xanh thẳm
+  const [water, gw] = mkCanvas(W, H);
+  ditherBands(gw, 0, S, W, H - S, PAL.water);
+  const bedBase = my(D);
+
+  // 5. Đá xa và đá gần dưới nước (bóng mờ, parallax) để tạo chiều sâu
+  const [uwFar, gu1] = mkCanvas(WW, H);
+  ridge(gu1, WW, bedBase + 2, PAL.hazeFar, (x) => 18 + 12 * Math.sin(x * 0.028 + 1) + 7 * Math.sin(x * 0.071) + R() * 1.5);
+  for (let i = 0; i < 5; i++) {   // vài trụ đá cao vươn lên
+    const cx = Math.round(R() * WW), hw = 6 + Math.round(R() * 6), top = S + 28 + Math.round(R() * 30);
+    for (let y = top; y < bedBase; y++) {
+      const k = (y - top) / (bedBase - top), half = Math.round(hw * (0.55 + 0.45 * k) + Math.sin(y * 0.3) * 1.2);
+      px(gu1, PAL.hazeFar, cx - half, y, half * 2, 1);
+    }
+  }
+  const [uwMid, gu2] = mkCanvas(WW, H);
+  ridge(gu2, WW, bedBase + 2, PAL.hazeMid, (x) => 9 + 6 * Math.sin(x * 0.05 + 3) + 4 * Math.sin(x * 0.13) + R() * 1.2, PAL.rimMid);
+
+  // 6. Đáy (gắn tọa độ thế giới): cát, tảng đá phủ rêu, san hô, bọt biển, sao biển, lu sành, bến
+  const [bed, gb] = mkCanvas(W, H);
+  for (let y = S + 16; y < H; y += 2) {   // tối dần hai mép, đậm dần theo độ sâu (không có mép cứng)
+    const ky = Math.min(1, (y - S - 16) / 60);
+    for (let x = 0; x < 48; x += 2) {
+      const a = (0.34 * ky * (1 - x / 48)).toFixed(3);
+      px(gb, PAL.vignette + a + ")", x, y, 2, 2);
+      px(gb, PAL.vignette + a + ")", W - 2 - x, y, 2, 2);
+    }
+  }
+  const bedY = [];
+  for (let x = 0; x < W; x++) {
+    bedY[x] = bedBase - Math.round(1.5 + 1.5 * Math.sin(x * 0.07) + Math.sin(x * 0.19 + 1) + R() * 0.8);
+    px(gb, PAL.sandLo, x, bedY[x], 1, H - bedY[x]);
+    px(gb, PAL.sand, x, bedY[x], 1, 2);
+    px(gb, PAL.sandHi, x, bedY[x]);
+    if (R() < 0.25) px(gb, PAL.sand, x, bedY[x] + 2 + Math.round(R() * 3));
+  }
+  const at = (x) => bedY[Math.max(0, Math.min(W - 1, Math.round(x)))];
+  const boulder = (cx, rw, rh) => {   // tảng đá nửa elip, sáng bên trái, rêu trên đỉnh
+    const base = at(cx) + 1;
+    for (let y = 0; y <= rh; y++) {
+      const half = Math.round(rw * Math.sqrt(1 - (y / rh) ** 2)), yy = base - y;
+      if (half <= 0) continue;
+      px(gb, PAL.rock, cx - half, yy, half * 2 + 1, 1);
+      px(gb, PAL.rockHi, cx - half, yy, Math.max(1, Math.round(half * 0.35)), 1);
+      px(gb, PAL.rockLo, cx + half - 1, yy, 2, 1);
+      if (y >= rh - 2) for (let x = cx - half; x <= cx + half; x++) if (R() < 0.7) px(gb, R() < 0.4 ? PAL.mossHi : PAL.moss, x, yy - 1);
+    }
+    for (let i = 0; i < rw; i++) if (R() < 0.35) {   // rêu rủ xuống thân đá
+      const x = cx - rw + Math.round(R() * rw * 2), len = 1 + Math.round(R() * 3);
+      px(gb, PAL.moss, x, base - rh + 1, 1, len);
+    }
+  };
+  for (let i = 0; i < 10; i++) boulder(mx(6) + Math.round(R() * (W - mx(6) - 10)), 5 + Math.round(R() * 7), 4 + Math.round(R() * 5));
+  for (let i = 0; i < 26; i++) {
+    const cx = mx(6) + Math.round(R() * (W - mx(6) - 6)), base = at(cx), kind = R(), col = PAL.coral[Math.floor(R() * PAL.coral.length)];
+    if (kind < 0.45) {                       // san hô nhánh
+      coralBranch(gb, R, cx, base, 3 + Math.round(R() * 2), Math.PI / 2 + (R() - 0.5) * 0.4, 2 + Math.round(R()), col);
+    } else if (kind < 0.65) {                // bọt biển ống
+      for (let k = 0; k < 2 + Math.round(R() * 2); k++) {
+        const tx = cx + k * 4, th = 5 + Math.round(R() * 7);
+        px(gb, PAL.sponge, tx, base - th, 3, th); px(gb, PAL.spongeIn, tx + 1, base - th, 1, 2);
+      }
+    } else if (kind < 0.82) {                // san hô tròn (não)
+      const r = 3 + Math.round(R() * 2);
+      for (let y = 0; y <= r; y++) { const half = Math.round(Math.sqrt(r * r - y * y)); px(gb, col[0], cx - half, base - y, half * 2 + 1, 1); }
+      for (let y = 1; y < r; y += 2) for (let x = -r + 1; x < r; x += 2) px(gb, col[1], cx + x + (y % 4 ? 1 : 0), base - y);
+    } else {                                 // quạt biển
+      for (let f = 0; f < 7; f++) {
+        const a = Math.PI * (0.25 + f * 0.083);
+        for (let j = 1; j <= 7; j++) px(gb, j > 5 ? col[1] : col[0], cx + Math.round(Math.cos(a) * j), base - Math.round(Math.sin(a) * j));
+      }
+    }
+  }
+  for (let i = 0; i < 4; i++) {              // sao biển
+    const sx0 = mx(8) + Math.round(R() * (W - mx(8))), sy0 = at(sx0) + 1;
+    px(gb, PAL.star, sx0 - 1, sy0, 3, 1); px(gb, PAL.star, sx0, sy0 - 1, 1, 3);
+  }
+  const jx = mx(X * 0.72), jy = at(jx) - 3;   // lu sành chìm, phủ rêu (dấu tích chợ nổi)
+  disc(gb, PAL.jar, jx, jy, 4); px(gb, PAL.jarLo, jx - 2, jy - 5, 5, 1); px(gb, PAL.jarHi, jx - 2, jy - 2, 1, 2);
+  px(gb, PAL.moss, jx - 3, jy - 4, 3, 1); px(gb, PAL.mossHi, jx + 1, jy - 4, 2, 1);
+  const dx0 = mx(dp[0] - 2.5), dx1 = mx(dp[0] + 2.5);   // bến gỗ + chòi lá của Má Tư
+  for (let x = dx0 + 1; x < dx1; x += 5) { px(gb, PAL.woodDark, x, S - 3, 2, my(3.5) - S + 3); px(gb, PAL.moss, x, S + 4, 2, my(3.5) - S - 4); }
+  px(gb, PAL.wood, dx0, S - 4, dx1 - dx0, 2);
+  for (let x = dx0 + 2; x < dx1; x += 3) px(gb, PAL.woodDark, x, S - 4);
+  const hx = mx(dp[0] - 1.6), hw = Math.round(3.2 * PX);
+  px(gb, PAL.wall, hx, S - 11, hw, 7);
+  px(gb, PAL.woodDark, hx + Math.floor(hw / 2) - 1, S - 9, 3, 5);
+  for (let r = 0; r < 5; r++) px(gb, r % 2 ? PAL.thatchDark : PAL.thatch, hx - 3 + r, S - 12 - r, hw + 6 - 2 * r, 1);
+  px(gb, PAL.lamp, hx + hw + 1, S - 10, 2, 2);
+
+  // 7. Danh sách hoạt ảnh: rong/tảo bẹ, phù du, tia nắng, bọt, đàn cá xa
+  const kelps = [], specks = [], rays = [], bubbles = [], schools = [];
+  for (let i = 0; i < 30; i++) {
+    const x = mx(5) + Math.round(R() * (W - mx(5) - 4)), tall = R() < 0.35;
+    kelps.push({ x, y: bedY[x], h: tall ? 16 + Math.round(R() * 14) : 4 + Math.round(R() * 7), ph: R() * 6.28, c: PAL.kelp[i % 2] });
+  }
+  for (let i = 0; i < 90; i++) specks.push({ x: R() * W, y: S + 4 + R() * (bedBase - S - 10), v: (R() - 0.5) * 3, ph: R() * 6.28 });
+  for (let i = 0; i < 10; i++) rays.push({ slope: -1.1 + i * 0.19 + (R() - 0.5) * 0.08, w: 3 + Math.round(R() * 4), len: 60 + Math.round(R() * 60), ph: R() * 6.28 });
+  for (let i = 0; i < 7; i++) {
+    const kx = mx(8) + Math.round(R() * (W - mx(8) - 4));
+    for (let j = 0; j < 4; j++) bubbles.push({ x: kx + Math.round((R() - 0.5) * 3), y0: bedY[kx] - 2, v: 7 + R() * 7, ph: R() * 300, big: R() < 0.3 });
+  }
+  for (let i = 0; i < 3; i++) {
+    const fish = [];
+    for (let j = 0; j < 9; j++) fish.push([Math.round((R() - 0.5) * 22), Math.round((R() - 0.5) * 8)]);
+    schools.push({ x0: R() * WW, y: S + 22 + Math.round(R() * (bedBase - S - 60)), v: (R() < 0.5 ? -1 : 1) * (3 + R() * 3), fish });
+  }
+
+  const [frame, g] = mkCanvas(W, H);
+  PB = { key, W, H, S, M, WW, sunX, sky, far, mid, water, uwFar, uwMid, bed, frame, g, kelps, specks, rays, bubbles, schools };
+  return PB;
+}
+
+// Ghép các lớp + hoạt ảnh lên canvas nhỏ. camX (mét) lệch theo người chơi để tạo parallax.
+function renderPixelBg(meta, camX, t) {
+  const P = pixelBg(meta), g = P.g, W = P.W, S = P.S;
+  const off = (k) => -P.M - Math.max(-P.M, Math.min(P.M, Math.round(camX * PX * k)));
+  g.clearRect(0, 0, W, P.H);
+  g.drawImage(P.sky, 0, 0);
+  g.drawImage(P.far, off(0.12), 0);
+  g.drawImage(P.mid, off(0.25), 0);
+  g.drawImage(P.water, 0, 0);
+  g.drawImage(P.uwFar, off(0.08), 0);
+  for (const sc of P.schools) {  // đàn cá nhỏ bơi xa (chỉ trang trí, không bắt được)
+    const span = P.WW + 60, cx = ((sc.x0 + t * sc.v) % span + span) % span - 30 + off(0.08);
+    const dir = sc.v > 0 ? 1 : -1;
+    for (const [fx, fy] of sc.fish) {
+      const x = Math.round(cx + fx), y = Math.round(sc.y + fy + Math.sin(t * 1.3 + fx) * 1.2);
+      px(g, PAL.school, x, y, 3, 1); px(g, PAL.school, x - dir, y - 1); px(g, PAL.school, x - dir, y + 1);
+    }
+  }
+  g.drawImage(P.uwMid, off(0.16), 0);
+  for (const r of P.rays) {  // tia nắng xòe ra từ phía mặt trời
+    const a0 = 0.075 + 0.04 * Math.sin(t * 0.9 + r.ph), sway = Math.sin(t * 0.2 + r.ph) * 0.03;
+    for (let k = 0; k < r.len; k++) {
+      g.fillStyle = `rgba(${PAL.ray},${(a0 * (1 - k / r.len)).toFixed(3)})`;
+      g.fillRect(Math.round(P.sunX + (k + 18) * (r.slope + sway)), S + 1 + k, Math.round(r.w + k * 0.05), 1);
+    }
+  }
+  g.drawImage(P.bed, 0, 0);
+  for (const kp of P.kelps) {  // rong / tảo bẹ đung đưa
+    for (let k = 0; k < kp.h; k++) {
+      const o = Math.round(Math.sin(t * 1.4 + kp.ph + k * 0.35) * (k / kp.h) * (kp.h > 12 ? 3 : 1.5));
+      px(g, kp.c[k % 4 < 2 ? 0 : 1], kp.x + o, kp.y - k);
+      if (k % 3 === 1) px(g, kp.c[1], kp.x + o + (k % 2 ? 1 : -1), kp.y - k);
+    }
+  }
+  for (const sp of P.specks) {  // phù du lơ lửng
+    const x = ((sp.x + t * sp.v) % W + W) % W;
+    px(g, PAL.speck, Math.round(x), Math.round(sp.y + Math.sin(t * 0.7 + sp.ph) * 2));
+  }
+  for (const bb of P.bubbles) {  // chuỗi bọt nổi lên
+    const span = bb.y0 - S - 2, y = Math.round(bb.y0 - ((t * bb.v + bb.ph) % span)), x = Math.round(bb.x + Math.sin(t * 3 + bb.ph) * 1.2);
+    if (bb.big) { px(g, PAL.bubble, x, y - 1, 2, 1); px(g, PAL.bubble, x - 1, y, 1, 1); px(g, PAL.bubble, x + 2, y, 1, 1); px(g, PAL.bubble, x, y + 1, 2, 1); }
+    else px(g, PAL.bubble, x, y);
+  }
+  for (let y = 2; y <= 12; y += 2) {  // vân sáng (caustics) ngay dưới mặt nước
+    for (let x = 0; x < W; x++) {
+      const v = Math.sin(x * 0.23 + t * 1.6 + y * 0.7) + Math.sin(x * 0.09 - t * 1.1 + y);
+      if (v > 1.25 + y * 0.03) px(g, PAL.caustic, x, S + y);
+    }
+  }
+  for (let x = 0; x < W; x++) {  // mặt nước gợn sóng
+    const wv = Math.sin(x * 0.32 + t * 2.4) + Math.sin(x * 0.11 - t * 1.3) + 0.6 * Math.sin(x * 0.047 + t * 0.7);
+    px(g, PAL.surfLo, x, S + 1);
+    px(g, PAL.surfHi, x, S - (wv > 1.3 ? 1 : 0));
+  }
+  for (let i = 0; i < 24; i++) {  // lấp lánh dưới mặt nước (vị trí băm giả ngẫu nhiên, đổi theo nhịp)
+    const step = Math.floor(t * 3 + i * 0.37);
+    const hsh = Math.imul(i * 7919 + step * 104729, 2654435761) >>> 0;
+    if ((step + i) % 3 === 0) px(g, PAL.surfHi, hsh % W, S + 2 + (hsh >>> 8) % 4, 2, 1);
+  }
+  return P;
+}
+
 // ----- cảnh GATHER: nhìn ngang, x sang phải, d xuống -----
 function drawGather(w, h) {
   const meta = snap.meta || {};
   const b = meta.bounds || { x: [0, 100], d: [0, 30] };
-  const X = b.x[1], D = b.d[1], SKY = 6;
+  const X = b.x[1], D = b.d[1], SKY = SKY_M;
   const top = 64, bottom = 56;
   const s = Math.max(1, Math.min((w - 20) / (X + 4), (h - top - bottom) / (D + SKY + 1)));
   const ox = (w - s * (X + 4)) / 2 + 2 * s, oy = top + SKY * s;
   const sx = (x) => ox + x * s, sy = (d) => oy + d * s;
-  // trời + nước
-  ctx.fillStyle = "#cfeaf5"; ctx.fillRect(0, top, w, SKY * s);
-  const g = ctx.createLinearGradient(0, oy, 0, sy(D));
-  g.addColorStop(0, "#49b0dc"); g.addColorStop(1, "#08243f");
-  ctx.fillStyle = g; ctx.fillRect(sx(0), oy, X * s, D * s);
-  ctx.strokeStyle = "#e9f7ff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx(0), oy); ctx.lineTo(sx(X), oy); ctx.stroke();
-  // vạch độ sâu
-  for (let d = 5; d <= D; d += 5) {
-    ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx(0), sy(d)); ctx.lineTo(sx(X), sy(d)); ctx.stroke();
-    text(d + " m", sx(0) + 4, sy(d) - 2, { size: 10, color: "rgba(255,255,255,.4)" });
-  }
-  // bến
+  // nền pixel art (trời, bờ, nước phù sa, đáy, bến) phóng to không làm mịn
+  const camX = snap.player && snap.player.pos ? snap.player.pos[0] - X / 2 : 0;
+  const P = renderPixelBg(meta, camX, performance.now() / 1000);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(P.frame, sx(-2), sy(-SKY), (P.W / PX) * s, (P.H / PX) * s);
+  // vạch độ sâu (mờ, chỉ ở mép trái)
+  for (let d = 5; d < D; d += 5) text(d + " m", sx(0) + 4, sy(d) - 2, { size: 10, color: d < D / 2 ? "rgba(6,40,70,.6)" : "rgba(220,245,255,.55)" });
+  // bến: vòng bán kính + nhãn (hình bến nằm trong nền)
   const dp = meta.dock_pos || [2, 0], dr = meta.dock_radius || 3;
-  ctx.fillStyle = "#8d6e4b"; ctx.fillRect(sx(dp[0] - 1.5), sy(-0.7), 3 * s, 0.9 * s);
-  ctx.fillStyle = "#b9503a"; ctx.beginPath(); ctx.moveTo(sx(dp[0] - 1.8), sy(-0.7)); ctx.lineTo(sx(dp[0]), sy(-2.4)); ctx.lineTo(sx(dp[0] + 1.8), sy(-0.7)); ctx.fill();
   ctx.strokeStyle = "rgba(255,230,150,.7)"; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(sx(dp[0]), sy(dp[1]), dr * s, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-  text("Bến (E)", sx(dp[0]), sy(-2.8), { size: 11, align: "center", color: "#5a3a22" });
+  text("Bến (E)", sx(dp[0]), sy(-4.6), { size: 11, align: "center", color: "#3d2a14" });
   // nút hái
   (snap.nodes || []).forEach((n) => {
     const ready = n.ready !== false;
