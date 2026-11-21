@@ -13,15 +13,47 @@ Cách làm việc kỹ thuật là **tự do** (push thẳng, nhánh + PR, pair,
 4. **Gắn tag** `phase-1` … `phase-4` đúng hạn; chạy được tại từng tag.
 5. **Ghi chép tối thiểu:** `docs/verification/phase-n.md`, `docs/clarify.md`, `docs/ai-usage-log.md`, `docs/retro.md`, `docs/members/<handle>.md`.
 
-## Bắt đầu nhanh
+## Chạy game (v1.0.0)
+
+**Yêu cầu:** Python ≥ 3.10 (chỉ thư viện chuẩn, không cần `pip install`), trình duyệt hiện đại (Chrome / Edge / Firefox / Safari). Benchmark cần thêm Chrome, Chromium hoặc Edge (tự tìm; hoặc đặt `CHONOI_BROWSER=<đường dẫn>`).
+
+**Từ clone sạch, 3 lệnh (macOS / Linux):**
 
 ```bash
-git clone <fork-của-nhóm> && cd <fork-của-nhóm>
-PYTHONPATH=tests:. python3 -m unittest discover -s tests -v        # smoke test
-python3 -m chonoi.live --mode gather                                # chơi thử trên trình duyệt (tùy chọn)
+git clone https://github.com/HieuCaoTlu/K5-L3B-LAB-Day12-AI-SDLC-Humanity.git
+cd K5-L3B-LAB-Day12-AI-SDLC-Humanity
+python3 -m chonoi.live --mode day      # mở http://127.0.0.1:8000/ — một Ngày: Lặn & Hái -> Mở Quán -> Shop -> Ngày sau
 ```
 
-Game cần chế độ **headless** theo Test Contract (`python3 -m chonoi.headless --mode gather|quan …`) để được chạy và chấm tự động. **Công nghệ không ràng buộc**: khung Python trong `chonoi/` chỉ là gợi ý, chi tiết ở [`docs/STARTER.md`](docs/STARTER.md).
+Chơi riêng từng buổi: `python3 -m chonoi.live --mode gather` hoặc `--mode quan` (thêm `--classic` cho quán đúng số liệu contract).
+
+**Điều khiển**
+
+| Phím | Buổi sáng (Lặn & Hái) | Buổi tối (Mở Quán) |
+|---|---|---|
+| WASD / mũi tên | Bơi | Đi |
+| Shift | Bơi nhanh | |
+| E | Hái ở mặt nước · cất đồ / cập bến ở bến | Nấu, bưng, phục vụ, mua ở ông Hai |
+| Space | Bắt cá (dưới nước) | |
+| Q | Kết thúc buổi sáng | |
+| Enter | Bắt đầu (màn chờ) · chơi lại khi hết buổi (chế độ một buổi) | Sang Ngày kế khi hết ca |
+| M | Bật / tắt âm thanh | Bật / tắt âm thanh |
+| H | Chế độ tương phản cao (hoặc mở `/?contrast=high`) | Chế độ tương phản cao |
+| L | Nhật ký sự kiện thô | |
+
+Cảnh báo dễ nhận biết (khung chữ + biểu tượng ⚠): **thủy quái gần / đang đuổi**, **oxy sắp hết**, **khách sắp giận**.
+
+**Lệnh kiểm tra và đo**
+
+```bash
+PYTHONPATH=tests:. python3 -m unittest discover -s tests -v                       # toàn bộ test (1 lệnh)
+python3 -m chonoi.headless --mode gather --seed 1 --ticks 600 --out out.jsonl      # headless (gather | quan | day)
+python3 -m chonoi.headless --mode day --seed 1 --ticks 108000 --out day.jsonl      # 5 Ngày liền mạch
+python3 -m chonoi.bench --seed 42 --duration 30 --out bench.json                   # benchmark có render (bench_cmd)
+python3 -m chonoi.soak --seed 7 --days 10 --out soak.json                          # soak 10 Ngày (soak_cmd)
+```
+
+Kết quả đo ở commit phát hành: [`docs/proof/phase-4/`](docs/proof/phase-4/) · ma trận kiểm chứng: [`docs/verification/phase-4.md`](docs/verification/phase-4.md). Chi tiết khung kỹ thuật: [`docs/STARTER.md`](docs/STARTER.md).
 
 ## Tự do sáng tạo
 

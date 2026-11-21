@@ -12,3 +12,7 @@
 | D3 | Phase 2 | Bàn giao pha: sáng → tối → ngày kế? | Giả định: cùng tick sim vừa kết thúc; pha sau bước đầu ở tick kế. Kho từ `gather_end` chuyển nguyên cá thể sang quán; kho dư bỏ sau Shop; tiền/earned/uy tín/cấp nâng cấp giữ qua ngày; oxy/Máu hồi đầy. | PO hỏi giảng viên |
 | D4 | Phase 2 | Input (`--inputs`) của `day` tính theo tick nào? | Giả định: tick toàn cục; `move` kế thừa qua ranh giới pha. | PO hỏi giảng viên |
 | D5 | Phase 2 | `--mode day` có nhận `--scenario`/`--inventory`/`--inventory-out`? | Giả định: không (mã thoát 2); tiền đầu game = 0, uy tín đầu = `reputation_initial`. | PO hỏi giảng viên |
+| P4-1 | Phase 4 | Benchmark "có render" đo ở đâu? | Giả định: đo trong trình duyệt thật (Chrome/Chromium/Edge headless, 1280×720) chạy đúng client `index.html`; FPS từ khoảng cách requestAnimationFrame. Máy không có trình duyệt -> `bench_cmd` mã 1. | Nhóm (Nguyên) |
+| P4-2 | Phase 4 | `load_ms` tính từ đâu tới đâu? | Giả định: từ lúc `bench_cmd` khởi chạy (đồng hồ của tiến trình Python) tới khung đầu tiên trang vẽ được cảnh lặn (đã có snapshot). | Nhóm (Nguyên) |
+| P4-3 | Phase 4 | Bot của `soak_cmd`? | Giả định: bot tất định đứng yên (input rỗng) -> cùng seed cùng kết quả; Shop mua theo luật cố định của `day.py`. Ngày 6–10 lặp kế hoạch D1–D5, số Ngày vẫn tăng. | Nhóm (Nguyên) |
+| P4-4 | Phase 4 | Ngưỡng "thủy quái gần" và "khách sắp giận"? | Giả định (chỉ hiển thị): thủy quái trong 1.5 × `croc_detect_radius` hoặc đang đuổi; oxy < 25%; khách đang chờ còn < 30% kiên nhẫn (cùng ngưỡng mặt "giận"). | Nhóm (Nguyên) |

@@ -3130,6 +3130,74 @@ cv.addEventListener("contextmenu", (e) => {
   }
 });
 
+// ---------- Ticket-04: cảnh báo dễ nhận biết + chế độ tương phản cao (H hoặc ?contrast=high) ----------
+let HC = false;
+try { HC = new URLSearchParams(location.search).get("contrast") === "high" || localStorage.getItem("chonoi_hc") === "1"; } catch (e) {}
+function setHC(on) {
+  HC = !!on;
+  try { localStorage.setItem("chonoi_hc", HC ? "1" : "0"); } catch (e) {}
+  cv.style.filter = HC ? "contrast(1.35) saturate(1.2)" : "";
+}
+setHC(HC);
+addEventListener("keydown", (e) => { if (!e.repeat && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "h") setHC(!HC); });
+function activeWarnings() {   // ba cảnh báo: thủy quái gần, oxy sắp hết (buổi sáng); khách sắp giận (quán)
+  const out = [];
+  if (!snap || snap.finished || snap.paused) return out;
+  const m = snap.meta || {};
+  if (snap.mode !== "quan") {
+    const p = snap.player;
+    if (!p || !p.pos) return out;
+    const near = (snap.crocs || []).filter((c) => c.state === "chase" || Math.hypot(c.pos[0] - p.pos[0], c.pos[1] - p.pos[1]) <= (m.croc_detect_radius || 6) * 1.5);
+    if (near.length) out.push(near.some((c) => c.state === "chase") ? "THỦY QUÁI ĐANG ĐUỔI! BƠI XA / NGOI LÊN" : "THỦY QUÁI Ở GẦN!");
+    if (!p.at_surface && p.oxygen_max_ticks && p.oxygen_ticks / p.oxygen_max_ticks < 0.25) out.push(p.oxygen_ticks <= 0 ? "HẾT OXY! NGOI LÊN NGAY" : "OXY SẮP HẾT - NGOI LÊN!");
+  } else {
+    const pd = (m.patience_s || 60) * 60;   // cùng ngưỡng 0.3 với mặt "giận" của khách
+    const angry = (snap.customers || []).filter((c) => c.state !== "eating" && c.patience_ticks_left !== undefined && c.patience_ticks_left / (c.patience_max || pd) < 0.3);
+    if (angry.length) out.push("KHÁCH SẮP GIẬN: " + angry.map((c) => c.table_id || c.id).join(", "));
+  }
+  return out;
+}
+function drawWarnings(w, h) {
+  const ws = activeWarnings();
+  if (!ws.length) return;
+  const blink = Math.floor(performance.now() / 350) % 2, size = HC ? 24 : 18, bh = Math.round(size * 1.9);
+  ws.forEach((msg, i) => {
+    ctx.font = "bold " + size + "px 'Courier New', monospace";
+    const tw = ctx.measureText(msg).width + size * 3, x = Math.round((w - tw) / 2), y = Math.round((snap.mode === "quan" ? h * 0.16 : 112) + i * (bh + 8));
+    ctx.fillStyle = HC ? "#000000" : "rgba(60,8,8,.88)"; ctx.fillRect(x, y, tw, bh);
+    ctx.lineWidth = HC ? 4 : 3; ctx.strokeStyle = HC ? (blink ? "#ffff00" : "#ffffff") : (blink ? "#ffd23f" : "#ff5a5a");
+    ctx.strokeRect(x + 1.5, y + 1.5, tw - 3, bh - 3);
+    const cx = x + size * 1.2, cy = y + bh / 2, r = size * 0.62;   // biểu tượng tam giác "!" (không phụ thuộc font emoji)
+    ctx.fillStyle = HC ? "#ffff00" : "#ffd23f";
+    ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy + r * 0.8); ctx.lineTo(cx - r, cy + r * 0.8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "bold " + Math.round(size * 0.8) + "px monospace"; ctx.fillText("!", cx, cy + r * 0.2);
+    ctx.font = "bold " + size + "px 'Courier New', monospace"; ctx.textAlign = "left";
+    ctx.fillStyle = HC ? "#ffff00" : "#fff2cf"; ctx.fillText(msg, x + size * 2.3, cy + 1);
+  });
+}
+
+// ---------- Ticket-04: chế độ đo của `python3 -m chonoi.bench` (/?bench=<s>&warmup=<s>&t0=<epoch ms>) ----------
+const BENCH = (() => {
+  try {
+    const q = new URLSearchParams(location.search), d = parseFloat(q.get("bench"));
+    return d > 0 ? { dur: d * 1000, warm: parseFloat(q.get("warmup") || "3") * 1000, t0: parseFloat(q.get("t0")) || 0,
+      start: null, last: null, ms: [], sum: 0, load: null, sent: false } : null;
+  } catch (e) { return null; }
+})();
+if (BENCH) { rulesShownOnce = true; showLog = false; }   // không mở popup luật khi đo
+function benchFrame() {      // gọi mỗi khung SAU khi vẽ cảnh: làm nóng rồi ghi thời gian từng khung, đủ thì gửi về server
+  if (!BENCH || BENCH.sent || !snap || snap.mode === "quan") return;
+  const now = performance.now();
+  if (BENCH.load === null) { BENCH.load = Date.now() - BENCH.t0; BENCH.start = BENCH.last = now; return; }   // khung đầu của cảnh đo
+  if (now - BENCH.start >= BENCH.warm) { const d = now - BENCH.last; BENCH.ms.push(+d.toFixed(3)); BENCH.sum += d; }
+  BENCH.last = now;
+  if (BENCH.sum >= BENCH.dur) {
+    BENCH.sent = true;
+    fetch("/bench", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ frame_ms: BENCH.ms, load_ms: BENCH.load }) });
+  }
+}
+
 function frame() {
   requestAnimationFrame(frame);  // đặt trước để lỗi vẽ không làm dừng vòng lặp
   const q = !!(snap && snap.mode === "quan");
@@ -3141,7 +3209,9 @@ function frame() {
     if (snap.mode === "quan") drawQuan(w, h); else drawGather(w, h);
     if (snap.mode !== "quan" && showLog) eventLog(w, h);  // L: bật/tắt nhật ký sự kiện thô
     overlay(w, h);
+    drawWarnings(w, h);
     updateMenu();
+    benchFrame();
   } else {
     text(offline ? "Không kết nối được máy chủ…" : "Đang tải…", w / 2, h / 2, { align: "center", size: 18 });
   }
