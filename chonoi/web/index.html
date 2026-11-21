@@ -1941,7 +1941,12 @@ function drawCustomerAt(c, cx, cy, m, hungry) {      // một khách ở vị tr
   const kind = 2 + hash(String(c.id)) % 3;              // 2 Chiikawa · 3 Hachiware · 4 Usagi (không dùng sprite PNG chó/mèo/vịt/ếch nữa)
   nameTag(c.name || CUST_NAMES[kind - 2], cx, cy - (kind === 4 ? 21 : 14), "#fff3c4");
   drawBlob(cx, cy, m, SPR[kind]);
-  if (m === "gian") { R(PL.ink, cx - 12, cy - 12, 1, 1); R("#e5493a", cx - 12, cy - 9, 3, 1); R("#e5493a", cx - 11, cy - 11, 1, 3); }
+  if (m === "gian") {
+    if (!qput("ui/emote_gian.png", cx - 23, cy - 3, 10, 10)) {
+      R(PL.ink, cx - 12, cy - 12, 1, 1); R("#e5493a", cx - 12, cy - 9, 3, 1); R("#e5493a", cx - 11, cy - 11, 1, 3);
+    }
+  } else if (m === "vui") qput("ui/emote_vui.png", cx - 23, cy - 3, 10, 10);
+  else if (hungry && m === "cho") qput("ui/emote_doi.png", cx - 23, cy - 3, 10, 10);
 }
 function drawCustomerPx(c, tb, ratio, t) {           // khách ngồi sau bàn (vẽ trước bàn)
   const m = moodOf(c, ratio);
@@ -1960,6 +1965,7 @@ function drawRaft(rx, ry, dir, t, alpha) {
   g.globalAlpha = alpha;
   if (qimg("env/xuong_khach.png")) {                    // xuồng khách 48x24
     qput("env/xuong_khach.png", rx - 24, ry - 10);
+    qput(qframe("fx.nuoc_bat", qnow()), rx + dir * 24 - 8, ry + 1);
     for (let k = 0; k < 5; k++) pxl(PL.foam, rx + dir * (26 + k * 3), ry + 8 + ((k + (t >> 3)) & 1));
     g.globalAlpha = 1; return;
   }
@@ -1996,13 +2002,17 @@ function drawBubblePx(c, tb, t) {                    // bong bóng gọi món: t
   if (!orders.length || c.state === "eating") return;
   const cx = lx(tb.pos[0]), cy = lz(tb.pos[1]) - 25, cols = Math.min(3, orders.length), rows = Math.ceil(orders.length / 3);
   const bw = cols * 14 + 2, bh = rows * 10 + 4, bx = cx + 13, by = cy - 6 - (rows - 1) * 10 + (((t >> 4) & 1) ? 0 : 1);
-  R(PL.ink, bx - 1, by - 1, bw + 2, bh + 2); R("#fffaf0", bx, by, bw, bh);
-  R(PL.ink, bx - 3, by + bh - 4, 3, 2); R("#fffaf0", bx - 2, by + bh - 4, 2, 1);
+  if (!qpanel("ui/bong_bong_dat_mon.png", bx - 5, by - 3, bw + 10, bh + 9, [36, 12, 12, 28])) {
+    R(PL.ink, bx - 1, by - 1, bw + 2, bh + 2); R("#fffaf0", bx, by, bw, bh);
+    R(PL.ink, bx - 3, by + bh - 4, 3, 2); R("#fffaf0", bx - 2, by + bh - 4, 2, 1);
+  }
   orders.forEach((o, i) => {
     const ix = bx + 2 + (i % 3) * 14, iy = by + 3 + Math.floor(i / 3) * 10;
     dishIcon(ix, iy, o.dish_id);
     if (o.state === "served") { R("rgba(255,250,240,.7)", ix, iy - 1, 12, 9); R(PL.green, ix + 4, iy + 5, 2, 1); R(PL.green, ix + 6, iy + 4, 1, 1); R(PL.green, ix + 7, iy + 3, 1, 1); R(PL.green, ix + 8, iy + 2, 1, 1); }
-    else if (o.state === "cooking") { R(PL.fire, ix + 9, iy + 4, 2, 3); R(PL.fireY, ix + 10, iy + 5, 1, 2); }
+    else if (o.state === "cooking" && !qput(qframe("fx.lua", qnow()), ix + 7, iy + 1, 8, 8)) {
+      R(PL.fire, ix + 9, iy + 4, 2, 3); R(PL.fireY, ix + 10, iy + 5, 1, 2);
+    }
   });
 }
 function patienceBarPx(tb, ratio) {
@@ -2222,6 +2232,8 @@ function drawQuanScene(w, h, t) {
   Object.keys(ARR).forEach((k) => { if (!live.has(k)) delete ARR[k]; });
 
   drawWater(t); drawDeck();
+  qput("env/trang_tri_2.png", MX + 3, MY + BH - 25);
+  qput("env/trang_tri_1.png", MX + BW - 27, MY + BH - 25);
   [[MX + 2, MY - 2], [MX + BW / 2, MY - 2], [MX + BW - 2, MY - 2], [MX + 2, MY + BH + 4], [MX + BW - 2, MY + BH + 4]].forEach(([x, y], i) => lanternPx(x, y, t + i * 17));
 
   const byTable = {};
@@ -2307,14 +2319,10 @@ function drawIcon(pat, x, y, color) { pat.forEach((row, j) => { for (let i = 0; 
 function drawHudLow() {
   const hudImg = qimg("ui/khung_hud.png");
   if (hudImg) {                                          // khung gỗ 9-slice (lề PNG 16/20/16/20 -> 4/5/4/5 điểm ảnh gốc)
-    const [ml, mt, mr, mb] = (AQ.man && AQ.man.hud_slice) || [16, 20, 16, 20], iw = hudImg.naturalWidth, ih = hudImg.naturalHeight;
-    const dl = ml / 4, dt = mt / 4, dr = mr / 4, db = mb / 4, H = 24;
+    const margins = AQ.man.hud_slice, dt = margins[1] / AQ.man.scale, db = margins[3] / AQ.man.scale, H = 24;
     R(PL.wood2, 0, 0, LW, H);                            // PNG chỉ có viền, ruột trong suốt: lót nền gỗ phía dưới
     for (let x = 0; x < LW; x += 24) R(PL.wood3, x, dt, 1, H - dt - db);
-    g.imageSmoothingEnabled = false;
-    const xs = [[0, ml, 0, dl], [ml, iw - ml - mr, dl, LW - dl - dr], [iw - mr, mr, LW - dr, dr]];
-    const ys = [[0, mt, 0, dt], [mt, ih - mt - mb, dt, H - dt - db], [ih - mb, mb, H - db, db]];
-    ys.forEach((yy) => xs.forEach((xx) => g.drawImage(hudImg, xx[0], yy[0], xx[1], yy[1], xx[2], yy[2], xx[3], yy[3])));
+    qpanel("ui/khung_hud.png", 0, 0, LW, H, margins);
   } else {
     R(PL.rim2, 0, 0, LW, 24); R(PL.rim, 0, 0, LW, 22); R(PL.wood2, 0, 0, LW, 20); R(PL.wood1, 0, 0, LW, 2);
     for (let x = 0; x < LW; x += 24) R(PL.wood3, x, 2, 1, 18);
@@ -2324,7 +2332,10 @@ function drawHudLow() {
   const rep = snap.reputation ?? 0, rmax = (snap.meta || {}).reputation_max || 5;
   for (let i = 0; i < rmax; i++) {                                                                                                               // sao uy tín
     const x = HX + 150 + i * 13, full = rep >= i + 1, half = !full && rep > i + 0.25;
-    if (qimg("ui/sao_uy_tin.png")) { if (half) g.globalAlpha = 0.55; qput(full || half ? "ui/sao_uy_tin.png" : "ui/sao_uy_tin_rong.png", x, 4); g.globalAlpha = 1; continue; }
+    if (half) g.globalAlpha = 0.55;
+    const drawn = qput(full || half ? "ui/sao_uy_tin.png" : "ui/sao_uy_tin_rong.png", x, 4);
+    g.globalAlpha = 1;
+    if (drawn) continue;
     R(PL.ink, x, 4, 12, 12); R(full ? "#ffd23f" : half ? "#d9b34a" : "#6e4a2a", x + 1, 5, 10, 10); R(full || half ? "#fff0a0" : "#8a6038", x + 2, 6, 2, 2);
     R(PL.ink, x + 5, 7, 2, 5); R(PL.ink, x + 3, 9, 6, 1);
   }
@@ -2356,7 +2367,18 @@ function drawHudLow() {
   });
 }
 function hudText() {
-  const s = Math.ceil((snap.time_left_ticks || 0) / 60), stock = snap.stock || {};
+  const s = Math.ceil((snap.time_left_ticks || 0) / 60), stock = snap.stock || {}, endImg = snap.finished && qimg("ui/man_ket_thuc.png");
+  if (endImg) {                                          // tranh kết ca 800x450: phủ màn hình (trừ thanh nút đáy), tối nhẹ để chữ đọc được
+    const W = LW * SC, H = LH * SC, k = Math.max(W / 800, H / 450), barY = (LH - 15) * SC;
+    ov.push(() => {                                      // clip chừa thanh nút đáy để "Ngày tiếp theo / Làm lại" không bị che
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, 0, W, barY); ctx.clip();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(endImg, (W - 800 * k) / 2, (H - 450 * k) / 2, 800 * k, 450 * k);
+      ctx.fillStyle = "rgba(10,20,26,.35)"; ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    });
+  }
   ov.push(() => {
     ptext(Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"), HX + 21, 10, { size: 8, align: "left", color: s <= 20 ? "#ff8a7a" : "#fff2cf" });
     ptext((snap.money ?? 0) + "k", HX + 81, 10, { size: 8, align: "left", color: "#ffe27a" });
@@ -2379,13 +2401,7 @@ function hudText() {
     (snap.events || []).forEach((e) => { const m = e.tick >= (snap.tick || 0) - 150 ? toastOf(e) : null, k = e.tick + e.name; if (m && !seen.has(k)) { seen.add(k); msgs.push([m, e.tick]); } });
     msgs.slice(-3).forEach(([m, tk], i) => ptext(m, LW / 2, 29 + i * 9, { size: 6.5, color: (snap.tick || 0) - tk > 110 ? "rgba(255,242,207,.5)" : "#fff2cf" }));
     if (snap.finished) {
-      const cy0 = Math.floor(LH / 2), endImg = qimg("ui/man_ket_thuc.png");
-      if (endImg) {                                      // tranh kết ca 800x450: phủ kín màn hình, tối nhẹ để chữ đọc được
-        const W = LW * SC, H = LH * SC, k = Math.max(W / 800, H / 450);
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(endImg, (W - 800 * k) / 2, (H - 450 * k) / 2, 800 * k, 450 * k);
-        ctx.fillStyle = "rgba(10,20,26,.35)"; ctx.fillRect(0, 0, W, H);
-      }
+      const cy0 = Math.floor(LH / 2);
       ctx.fillStyle = "rgba(10,20,26,.7)"; ctx.fillRect(0, (cy0 - 30) * SC, LW * SC, 60 * SC);
       ptext("KẾT CA" + (snap.day !== undefined ? " · NGÀY " + snap.day : ""), LW / 2, cy0 - 20, { size: 14, color: "#ffd23f" });
       ptext((snap.money ?? 0) + "k · uy tín " + (snap.reputation ?? 0).toFixed(1) + " · điểm " + (snap.score ?? 0), LW / 2, cy0 - 2, { size: 7, color: "#fff2cf" });
@@ -2555,7 +2571,6 @@ function updateMenu() {
 
   const isGather = snap.mode !== "quan";
   const showBar = isGather;                      // Quán: HUD + nút nằm trong canvas, không dùng thanh DOM
-  br.style.display = isGather ? "" : "none";
   mb.style.display = showBar ? "flex" : "none";
   cv.style.marginTop = showBar ? "44px" : "0px";
   cv.style.height = showBar ? "calc(100vh - 44px)" : "100vh";
