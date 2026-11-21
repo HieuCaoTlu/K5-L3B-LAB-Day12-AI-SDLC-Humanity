@@ -27,7 +27,7 @@ def names(rows):
 class QuanP2(unittest.TestCase):
     def test_contract_v11_values(self):
         c = CONTRACT
-        self.assertEqual(c["contract_version"], "1.2")   # đổi từ "1.1": Phase 3 bật độ tươi (khối freshness)
+        self.assertEqual(c["contract_version"], "1.3")   # "1.1" -> "1.2" (Phase 3, độ tươi) -> "1.3" (Phase 4: bench_cmd, soak_cmd; gameplay giữ v1.2)
         self.assertEqual([s["id"] for s in TUNING["quan"]["stoves"]], ["B1", "B2"])
         self.assertEqual([t["id"] for t in TUNING["quan"]["tables"]], ["T1", "T2", "T3", "T4"])
         self.assertEqual(len(TUNING["menu"]), 6)
