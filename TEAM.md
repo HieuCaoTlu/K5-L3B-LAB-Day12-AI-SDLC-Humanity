@@ -4,18 +4,18 @@
 
 | Thành viên | GitHub handle | Module chính | Vai quy trình | Người dự phòng cho |
 |---|---|---|---|---|
-| Cao Trung Hiếu (2A202603993) | HieuCaoTlu | `sim/gather` (lát 1) | Integrator (giữ `docs/contracts/`, gắn tag) + QA lead (kiêm) | Lê Bá Nguyên |
+| Cao Trung Hiếu (2A202603993) | HieuCaoTlu | `sim/gather` | Integrator (giữ `docs/contracts/`, gắn tag) + QA lead (kiêm) | Lê Bá Nguyên |
 | Lê Phạm Thành Đạt (2A202604027) | liliustwocout | `client/ui` | Scrum/Release | Cao Thanh Tùng |
 | Cao Thanh Tùng (2A202603982) | TungCTT | `sim/quan` | PO (đầu mối hỏi giảng viên, giữ `docs/clarify.md`) | Lê Phạm Thành Đạt |
-| Lê Bá Nguyên (2A202604100) | lbNGuyen06 | `sim/gather` (lát 2) | (không giữ vai riêng) | Cao Trung Hiếu |
+| Lê Bá Nguyên (2A202604100) | lbNGuyen06 | `client/ui` | (không giữ vai riêng) | Cao Trung Hiếu |
 
 **Vai quy trình:** PO (đầu mối hỏi giảng viên, giữ `docs/clarify.md`) · Integrator (giữ `docs/contracts/`, gắn tag) · QA lead · Scrum/Release. Có thể kiêm.
 
 ## Công việc từng module
 
-- **`sim/gather`** (buổi sáng): lát 1 (Hiếu) gồm bơi, oxy, ngạt, Máu, giỏ; lát 2 (Nguyên) gồm hái nút, bắt cá, cập bến.
+- **`sim/gather`** (buổi sáng): bơi, oxy, ngạt, Máu, giỏ, hái nút, bắt cá, cập bến.
 - **`sim/quan`** (buổi tối): khách, bếp, bưng món, tiền, uy tín.
-- **`client/ui`**: HUD, đồ họa, âm thanh; chỉ đọc snapshot, không sửa luật.
+- **`client/ui`** (Đạt, Nguyên): HUD, đồ họa, âm thanh; chỉ đọc snapshot, không sửa luật.
 - **Kiểm chứng:** mỗi người tự test phần mình; Hiếu điền `docs/verification/` và xác nhận test xanh trước khi gắn tag.
 
 ## Thỏa thuận làm việc nhóm (điền trong 15 phút kickoff, ≤ 10 dòng)
