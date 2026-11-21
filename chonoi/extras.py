@@ -30,7 +30,7 @@ def build_tuning(base: dict, day: int = 1, money: int = START_MONEY) -> dict:
                    enumerate([(3.5, 6.2), (8, 6.2), (12.5, 6.2), (17, 6.2), (3.5, 2.4), (8, 2.4), (12.5, 2.4), (17, 2.4)])]
     q["vendor"] = {"pos": [20.2, 4.4], "name": "Ông Hai",
                    "prices": {"ca_loc": 35, "ca_linh": 20, "bong_dien_dien": 25, "bong_sung": 15, "ca_keo": 22, "keo_neo": 12, "coca": 12}}
-    t["menu"]["coca"] = {"recipe": {"coca": 1}, "cook_s": 1, "price": 20}
+    t["menu"]["coca"] = {"recipe": {"coca": 1}, "cook_s": 1, "price": 20, "instant": True}   # lấy liền, bấm E một lần là cầm được
     q["first_customer_tick"] = 60  # khách đầu tiên đến sau 1 giây
     q["customer_interval_s"] = max(3.5, 8.0 - 0.8 * (day - 1))  # ngày 1: 8 s/khách; mỗi ngày dày thêm 0.8 s, tối thiểu 3.5 s
     q["patience_s"] = 50  # kiên nhẫn ngắn hơn chuẩn (60 s) cho khó ngay từ đầu
