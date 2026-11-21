@@ -135,7 +135,7 @@ class GatherSim:
         self.reason = None
 
     # --- giao diện cho runner -------------------------------------------------
-    def inventory_items(self) -> dict:
+    def inventory_items(self):
         return hold_to_items(self.hold)
 
     def snapshot(self) -> dict:

@@ -1,7 +1,7 @@
 """Sáng tạo của nhóm (chỉ bật ở chonoi.live, KHÔNG dùng ở headless nên không đụng Test Contract).
 
-`build_tuning` trả bản sao số liệu đã chỉnh cho chế độ quán "nhiều ngày": 3 bếp (mỗi bếp một món) + tủ lạnh coca,
-6 bàn, ông bán nguyên liệu giá cao, khách đòi nhiều món hơn và đến dày hơn khi qua nhiều ngày.
+`build_tuning` trả bản sao số liệu đã chỉnh cho chế độ quán "nhiều ngày": 6 bếp (mỗi bếp một món) + tủ lạnh coca,
+8 bàn trong quán rộng 22 × 12, ông bán nguyên liệu giá cao, khách đòi nhiều món hơn và đến dày hơn khi qua nhiều ngày.
 `game.contract.json` giữ nguyên.
 """
 
@@ -18,20 +18,22 @@ def max_dishes(day: int) -> int:
 def build_tuning(base: dict, day: int = 1, money: int = START_MONEY) -> dict:
     t = copy.deepcopy(base)
     q = t["quan"]
-    q["start_pos"] = [8, 3.5]
-    q["stoves"] = [
-        {"id": "B1", "pos": [2, 8], "serves": "ca_loc_nuong_trui"},
-        {"id": "B2", "pos": [5, 8], "serves": "goi_bong_sung"},
-        {"id": "B3", "pos": [8, 8], "serves": "lau_ca_linh_dien_dien"},
-        {"id": "B4", "pos": [11, 8], "serves": "coca"},
-    ]
+    t["freshness"] = {"initial": 100, "gather_decay_per_s": 0.5, "quan_decay_per_s": 0.25, "spoiled_below": 30}  # Mùa Nước Nổi
+    q["flex_serve"] = True  # món nấu cho khách này vẫn đưa được cho khách khác gọi cùng món (không phải đưa theo thứ tự)
+    q["wait_for_stock"] = True  # khách vẫn tới khi chưa có hàng; mua nguyên liệu ở ông Hai rồi nấu (không cần --debug-stock)
+    q["duration_s"] = 90  # ca tối chơi thử rút còn 1 phút 30 giây (contract chuẩn vẫn là 180 s)
+    q["bounds"] = {"x": [0, 22], "z": [0, 12]}  # quán mở rộng (contract chuẩn: 16 × 10)
+    q["start_pos"] = [11, 4.4]
+    serves = ["ca_loc_nuong_trui", "goi_bong_sung", "lau_ca_linh_dien_dien", "canh_chua_ca_loc", "ca_keo_nuong", "lau_mam", "coca"]
+    q["stoves"] = [{"id": f"B{i + 1}", "pos": [2.5 + 3 * i, 10], "serves": d} for i, d in enumerate(serves)]   # mỗi món một bếp, coca ở tủ lạnh
     q["tables"] = [{"id": f"T{i + 1}", "pos": [x, z]} for i, (x, z) in
-                   enumerate([(4, 5), (8, 5), (12, 5), (4, 2), (8, 2), (12, 2)])]
-    q["vendor"] = {"pos": [14.6, 8.4], "name": "Ông Hai",
-                   "prices": {"ca_loc": 35, "ca_linh": 20, "bong_dien_dien": 25, "bong_sung": 15, "coca": 12}}
+                   enumerate([(3.5, 6.2), (8, 6.2), (12.5, 6.2), (17, 6.2), (3.5, 2.4), (8, 2.4), (12.5, 2.4), (17, 2.4)])]
+    q["vendor"] = {"pos": [20.2, 4.4], "name": "Ông Hai",
+                   "prices": {"ca_loc": 35, "ca_linh": 20, "bong_dien_dien": 25, "bong_sung": 15, "ca_keo": 22, "keo_neo": 12, "coca": 12}}
     t["menu"]["coca"] = {"recipe": {"coca": 1}, "cook_s": 1, "price": 20}
     q["first_customer_tick"] = 60  # khách đầu tiên đến sau 1 giây
-    q["customer_interval_s"] = max(4.0, 10.0 - 1.0 * (day - 1))  # ngày 1: 10 s/khách; mỗi ngày dày thêm 1 s, tối thiểu 4 s
+    q["customer_interval_s"] = max(3.5, 8.0 - 0.8 * (day - 1))  # ngày 1: 8 s/khách; mỗi ngày dày thêm 0.8 s, tối thiểu 3.5 s
+    q["patience_s"] = 50  # kiên nhẫn ngắn hơn chuẩn (60 s) cho khó ngay từ đầu
     q["max_dishes"] = max_dishes(day)
     q["upgrades"] = {
         "tasty": {"name": "Nấu ngon hơn", "icon": "chef", "desc": "Khách trả thêm +15% tiền món mỗi cấp", "costs": [80, 140, 220, 320, 450]},

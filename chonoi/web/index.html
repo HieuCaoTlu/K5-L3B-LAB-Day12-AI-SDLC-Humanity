@@ -666,7 +666,7 @@ async function poll() {
     trackPlayer();
     handleQuanAudio(snap);
   } catch (e) { offline = true; }
-  setTimeout(poll, 16);
+  setTimeout(poll, 33);
 }
 poll();
 
@@ -1100,9 +1100,7 @@ addEventListener("keydown", (e) => { if (!e.repeat && e.key.toLowerCase() === "l
 // Enter: buổi sáng đã kết thúc (ngất / cập bến / hết giờ) -> chơi lại ngay, khỏi cầm chuột (giống nút "Bắt đầu lại").
 // preventDefault để Enter không "bấm" thêm nút đang được focus -> tránh restart hai lần.
 addEventListener("keydown", (e) => {
-  if (e.key !== "Enter" || e.repeat || !snap || !snap.finished) return;
-  if (snap.flow && (snap.mode === "gather" || snap.reason === "time")) { e.preventDefault(); postRestart({ next: true }); return; }  // ngày liền mạch: sáng -> tối -> sáng hôm sau
-  if (snap.mode !== "gather") return;
+  if (e.key !== "Enter" || e.repeat || !snap || snap.mode !== "gather" || !snap.finished) return;
   e.preventDefault();
   postRestart({});
 });
@@ -1420,11 +1418,6 @@ function gatherEndPanel(w, h) {                    // bảng kết thúc buổi 
     });
   }
   const blink = Math.floor(performance.now() / 500) % 2 ? GC.gold : GC.paper;
-  if (snap.flow) {
-    htext("Nhấn ENTER để sang buổi tối ▶", w / 2, y0 + ph - 30, { size: 16, align: "center", color: blink });
-    htext("hoặc bấm \"Làm lại\" để bơi lại buổi sáng", w / 2, y0 + ph - 12, { size: 11, align: "center", color: "#e0c58f" });
-    return;
-  }
   htext("Nhấn ENTER để chơi lại", w / 2, y0 + ph - 30, { size: 16, align: "center", color: blink });
   if (snap.day !== undefined && snap.reason === "time") htext("hoặc bấm \"Ngày tiếp theo\" trên menu", w / 2, y0 + ph - 12, { size: 11, align: "center", color: "#e0c58f" });
 }
@@ -2242,7 +2235,7 @@ function drawQuanScene(w, h, t) {
 }
 
 // ---------- HUD của bạn (từ mock_quan.html): khung gỗ trên + thanh kho dưới, đọc số từ snapshot ----------
-const KHO_NAME = { ca_loc: "cá lóc", ca_linh: "cá linh", bong_dien_dien: "điên điển", bong_sung: "bông súng", coca: "coca" };
+const KHO_NAME = { ca_keo: "cá kèo", keo_neo: "kèo nèo", ca_loc: "cá lóc", ca_linh: "cá linh", bong_dien_dien: "điên điển", bong_sung: "bông súng", coca: "coca" };
 function toastOf(e) {
   const d = e.data || {};
   switch (e.name) {
@@ -2298,7 +2291,7 @@ function drawHudLow() {
     { id: "audio", icon: audioMuted ? "audioOff" : "audioOn", label: (audioMuted ? "Bật nhạc" : "Tắt nhạc") + " (M · phải: âm lượng)", on: true },
     { id: "rules", label: "Luật chơi", on: true },
     { id: "upg", label: "Nâng cấp", on: !!snap.upgrades },
-    { id: "next", label: snap.flow ? "Sáng hôm sau" : "Ngày tiếp theo", on: snap.day !== undefined, enabled: !!(snap.finished && snap.reason === "time") },
+    { id: "next", label: "Ngày tiếp theo", on: snap.day !== undefined, enabled: !!(snap.finished && snap.reason === "time") },
     { id: "retry", label: "Làm lại", on: true },
     { id: "new", label: "Chơi lại từ đầu", on: snap.day !== undefined },
   ].filter((b) => b.on);
@@ -2324,10 +2317,20 @@ function hudText() {
   ov.push(() => {
     ptext(Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"), HX + 21, 10, { size: 8, align: "left", color: s <= 20 ? "#ff8a7a" : "#fff2cf" });
     ptext((snap.money ?? 0) + "k", HX + 81, 10, { size: 8, align: "left", color: "#ffe27a" });
-    if (snap.day !== undefined) ptext("NGÀY " + snap.day, HX + 128, snap.next_customer_ticks !== undefined ? 6 : 10, { size: 5, color: "#ffe9b0" });
-    if (snap.next_customer_ticks !== undefined) ptext("KHÁCH " + Math.ceil(snap.next_customer_ticks / 60) + "s", HX + 128, 14, { size: 4.5, color: "#e0c58f" });
+    if (snap.day !== undefined) ptext("NGÀY " + snap.day, HX + 128, 10, { size: 5, color: "#ffe9b0" });
+    if (snap.next_customer_ticks !== undefined) {
+      const f = Math.max(0, Math.min(1, 1 - snap.next_customer_ticks / (snap.customer_interval_ticks || 900)));   // thanh khách mới tới (pixel)
+      const bw = 48 * SC, bh = 5 * SC, bx = LW * SC - bw - 8 * SC, by = 23 * SC, fw = Math.round(bw * f / SC) * SC;   // góc phải, dưới thanh gỗ trên
+      ptext("KHÁCH MỚI " + Math.ceil(snap.next_customer_ticks / 60) + "s", (bx - 3 * SC) / SC, 25.5, { size: 4.5, align: "right", color: "#fff2cf" });
+      ctx.fillStyle = "#241410"; ctx.fillRect(bx - SC, by - SC, bw + 2 * SC, bh + 2 * SC);
+      ctx.fillStyle = "#4a2b14"; ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = f > 0.85 ? "#ffd23f" : "#e8933a"; ctx.fillRect(bx, by, fw, bh);
+      ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(bx, by, fw, SC);
+    }
     ptext("ĐIỂM " + (snap.score ?? 0), HX + 224, 10, { size: 7, align: "left", color: "#fff2cf" });
-    const kho = Object.keys(stock).map((k) => (KHO_NAME[k] || k) + " " + stock[k]).join(" · ");
+    const fr = snap.fresh;   // Mùa Nước Nổi: số cá thể chưa ươn, độ tươi trung bình, số ươn theo loại
+    const kho = fr ? Object.keys(fr).filter((k) => fr[k].n || fr[k].spoiled).map((k) => (KHO_NAME[k] || k) + " " + fr[k].n + (fr[k].n ? " " + Math.round(fr[k].avg) + "%" : "") + (fr[k].spoiled ? " (ươn " + fr[k].spoiled + ")" : "")).join(" · ")
+      : Object.keys(stock).map((k) => (KHO_NAME[k] || k) + " " + stock[k]).join(" · ");
     ptext("KHO  " + (kho || "(trống — bấm ông Hai để mua)"), HX + 6, LH - 7, { size: 4.4, align: "left", color: "#ffe9b0", bold: true });
     const seen = new Set(), msgs = [];
     (snap.events || []).forEach((e) => { const m = e.tick >= (snap.tick || 0) - 150 ? toastOf(e) : null, k = e.tick + e.name; if (m && !seen.has(k)) { seen.add(k); msgs.push([m, e.tick]); } });
@@ -2343,7 +2346,7 @@ function hudText() {
       ctx.fillStyle = "rgba(10,20,26,.7)"; ctx.fillRect(0, (cy0 - 30) * SC, LW * SC, 60 * SC);
       ptext("KẾT CA" + (snap.day !== undefined ? " · NGÀY " + snap.day : ""), LW / 2, cy0 - 20, { size: 14, color: "#ffd23f" });
       ptext((snap.money ?? 0) + "k · uy tín " + (snap.reputation ?? 0).toFixed(1) + " · điểm " + (snap.score ?? 0), LW / 2, cy0 - 2, { size: 7, color: "#fff2cf" });
-      ptext(snap.day !== undefined && snap.reason === "time" ? (snap.flow ? "Bấm nút ▶ để sang sáng hôm sau" : "Bấm nút ▶ để sang ngày kế tiếp") : "Bấm nút ↻ để chơi lại", LW / 2, cy0 + 10, { size: 6, color: "#e0c58f" });
+      ptext(snap.day !== undefined && snap.reason === "time" ? "Bấm nút ▶ để sang ngày kế tiếp" : "Bấm nút ↻ để chơi lại", LW / 2, cy0 + 10, { size: 6, color: "#e0c58f" });
     }
   });
 }
@@ -2442,8 +2445,7 @@ const RULES = {
   gather: `<div class="pxh">${icon("book", 32)} LUẬT CHƠI - BUỔI SÁNG</div>
 <ul><li>WASD / mũi tên để bơi, <b>E</b> hái nút ở mặt nước hoặc cập bến, <b>Space</b> bắt cá dưới nước.</li>
 <li>Hết oxy dưới nước thì mất Máu; hết Máu là ngất và mất giỏ.</li>
-<li>Giỏ chứa tối đa 12 món. Về bến bấm <b>E</b> để kết thúc buổi.</li>
-<li>Những gì mang về sẽ thành nguyên liệu cho <b>buổi tối</b> ở quán. Ngất thì mất giỏ, quán phải mua thêm của ông Hai.</li></ul>`,
+<li>Giỏ chứa tối đa 12 món. Về bến bấm <b>E</b> để kết thúc buổi.</li></ul>`,
 };
 const rulesEl = document.getElementById("rules");
 function showRules(on) {
@@ -2505,8 +2507,7 @@ function updateMenu() {
   const bu = document.getElementById("btnUpg");
   const mb = document.getElementById("menubar");
   bn.style.display = bw.style.display = multi ? "" : "none";
-  bn.disabled = !(snap.finished && (snap.reason === "time" || (snap.flow && snap.mode === "gather")));
-  bn.textContent = snap.flow && snap.mode === "gather" ? "▶ Sang buổi tối" : snap.flow ? "▶ Sáng hôm sau" : "▶ Ngày tiếp theo";
+  bn.disabled = !(snap.finished && snap.reason === "time");
   bu.style.display = snap.upgrades ? "" : "none";
 
   const isGather = snap.mode !== "quan";

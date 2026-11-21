@@ -8,7 +8,7 @@ phải có đúng một món, khách eating thiếu giá/tip...) — xem PRD-0 m
 import json
 
 from .errors import BadInput
-from .inventory import KINDS_P1, validate_items
+from .inventory import KINDS_P1, validate_count_items, validate_item_list, validate_items
 
 GATHER_KEYS = {"player", "hold", "nodes", "fish", "crocs", "monsters", "random_fish", "time_left_ticks", "day"}
 GATHER_PLAYER_KEYS = {"pos", "vel", "heading_deg", "hp", "oxygen_ticks", "zero_oxy_ticks",
@@ -148,8 +148,9 @@ def _validate_quan(b, tuning):
     for arr in ("stoves", "tables", "customers"):
         if arr in b:
             _check_ids(arr, b[arr])
+    fresh = "freshness" in tuning  # contract v1.2: kho cá thể {id, kind, fresh}; kho đếm -> mã 2
     if "stock" in b:
-        validate_items(b["stock"])
+        validate_item_list(b["stock"]) if fresh else validate_count_items(b["stock"])
     p = b.get("player", {})
     if not isinstance(p, dict) or set(p) - QUAN_PLAYER_KEYS:
         raise BadInput("quan.player chỉ có pos và vel")
@@ -177,7 +178,7 @@ def _validate_quan(b, tuning):
         if c.get("state", "waiting") == "waiting":
             for k, n in menu[dish]["recipe"].items():
                 need[k] = need.get(k, 0) + n
-    if "stock" in b:
+    if "stock" in b and isinstance(b["stock"], dict):
         for k, n in need.items():
             if b["stock"].get(k, 0) < n:
                 raise BadInput(f"khách giữ chỗ {k} ×{n} nhưng kho chỉ có {b['stock'].get(k, 0)}")
