@@ -34,7 +34,14 @@ class QuanSim:
         self._tgt = None
         self._ramp_left = 0
         # kho: --inventory HOẶC scenario.stock (cả hai -> cli đã báo mã 2)
-        self.stock = dict(inventory if inventory is not None else scenario.get("stock", {}))
+        raw_stock = inventory if inventory is not None else scenario.get("stock", {})
+        if isinstance(raw_stock, list):
+            d = {}
+            for it in raw_stock:
+                d[it["kind"]] = d.get(it["kind"], 0) + 1
+            self.stock = d
+        else:
+            self.stock = dict(raw_stock)
         h0 = scenario.get("hand")  # khay bưng: danh sách món đang cầm (mặc định chỉ cầm được 1)
         self.tray = [] if not h0 else [h0 if isinstance(h0, dict) else {"dish_id": h0, "customer_id": None, "order": None}]
         self.upg_cfg = t.get("upgrades", {})

@@ -11,6 +11,10 @@ def tuning_gather():
         return json.load(f)["tuning"]["gather"]
 
 
+def _items(*kinds, fresh=100, start=1):
+    return [{"id": f"I{start + i}", "kind": k, "fresh": fresh} for i, k in enumerate(kinds)]
+
+
 def _run_gather(w, scenario_gather, input_frames=None, ticks=1, snapshot_every=1, inventory_out=None, tag="run"):
     sc = write_json(w.path(f"{tag}_sc.json"), {"gather": scenario_gather})
     args = ["--mode", "gather", "--seed", "1", "--ticks", str(ticks),
@@ -222,17 +226,23 @@ class GatherChokeAndFaintTest(unittest.TestCase):
                 w,
                 {
                     "player": {"pos": [20, 10], "oxygen_ticks": 0, "zero_oxy_ticks": interval - 1, "hp": 1},
-                    "hold": ["ca_loc", "bong_sung", "ca_linh"],
+                    "hold": _items("ca_loc", "bong_sung", "ca_linh"),
                 },
                 ticks=10,
                 inventory_out=inv,
             )
             evs = events(rows)
-            self.assertEqual([(e["tick"], e["name"], e["data"]) for e in evs], [
-                (1, "choke", {"hp": 0}),
-                (1, "faint", {"cause": "choke", "lost": ["ca_linh", "bong_sung", "ca_loc"], "hp": 0}),
-                (1, "gather_end", {"reason": "fainted", "inventory": {"items": {}}}),
+            self.assertEqual([(e["tick"], e["name"]) for e in evs], [
+                (1, "choke"),
+                (1, "faint"),
+                (1, "gather_end"),
             ])
+            self.assertEqual(evs[0]["data"], {"hp": 0})
+            self.assertEqual(evs[1]["data"]["cause"], "choke")
+            self.assertEqual(evs[1]["data"]["hp"], 0)
+            self.assertEqual([it["id"] for it in evs[1]["data"]["lost"]], ["I3", "I2", "I1"])
+            self.assertEqual([it["kind"] for it in evs[1]["data"]["lost"]], ["ca_linh", "bong_sung", "ca_loc"])
+            self.assertEqual(evs[2]["data"], {"reason": "fainted", "inventory": {"items": []}})
             snap = snapshots(rows)[-1]
             self.assertEqual(snap["tick"], 1)
             self.assertEqual(snap["state"], "finished")
@@ -243,7 +253,7 @@ class GatherChokeAndFaintTest(unittest.TestCase):
             self.assertEqual(rows[-1]["ticks"], 1)
             self.assertEqual(rows[-1]["reason"], "fainted")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
     def test_faint_stops_step_before_dock_and_time(self):
         g = tuning_gather()
@@ -263,7 +273,7 @@ class GatherChokeAndFaintTest(unittest.TestCase):
                         "zero_oxy_ticks": interval - 1,
                         "hp": 1,
                     },
-                    "hold": ["ca_loc"],
+                    "hold": _items("ca_loc"),
                     "time_left_ticks": 1,
                 },
                 input_frames=[{"tick": 0, "interact": True}],
@@ -273,7 +283,7 @@ class GatherChokeAndFaintTest(unittest.TestCase):
             self.assertEqual([e["name"] for e in events(rows)], ["choke", "faint", "gather_end"])
             self.assertEqual(rows[-1]["reason"], "fainted")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
 
 class GatherHarvestAndCatchTest(unittest.TestCase):
@@ -301,7 +311,7 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
                 ("gather", {"node_id": "N2", "kind": "bong_dien_dien", "amount": y}),
             ])
             snap = snapshots(rows)[-1]
-            self.assertEqual(snap["hold"], ["bong_dien_dien"] * y)
+            self.assertEqual([(it["id"], it["kind"], it["fresh"]) for it in snap["hold"]], [("I1", "bong_dien_dien", 100.0)] * y)
             n2 = next(n for n in snap["nodes"] if n["id"] == "N2")
             self.assertFalse(n2["ready"])
             self.assertEqual(n2["regrow_ticks"], regrow_ticks)
@@ -347,7 +357,7 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
                 w,
                 {
                     "player": {"pos": [20, 0]},
-                    "hold": ["ca_loc"] * cap,
+                    "hold": _items(*(["ca_loc"] * cap)),
                     "nodes": [{"id": "N1", "kind": "bong_sung", "pos": [20, 0]}],
                 },
                 input_frames=[{"tick": 0, "interact": True}],
@@ -390,7 +400,8 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
             ])
             snap = snapshots(rows)[-1]
             self.assertEqual(snap["fish"], [])
-            self.assertEqual(snap["hold"], ["ca_linh"] * fy["ca_linh"] + ["ca_loc"] * fy["ca_loc"])
+            self.assertEqual([it["kind"] for it in snap["hold"]], ["ca_linh"] * fy["ca_linh"] + ["ca_loc"] * fy["ca_loc"])
+            self.assertEqual([it["id"] for it in snap["hold"]], ["I1", "I2", "I3", "I4"])
 
     def test_catch_hold_full_keeps_fish_no_fallback_no_cooldown(self):
         g = tuning_gather()
@@ -401,7 +412,7 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
                 w,
                 {
                     "player": {"pos": [20, 10]},
-                    "hold": ["bong_sung"] * (cap - 1),
+                    "hold": _items(*(["bong_sung"] * (cap - 1))),
                     "fish": [
                         {"id": "F1", "kind": "ca_linh", "pos": [20, 10]},
                         {"id": "F2", "kind": "ca_loc", "pos": [20.5, 10]},
@@ -463,7 +474,8 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
             self.assertEqual([e["name"] for e in events(rows)], ["fish_caught", "gather_end"])
             self.assertEqual(rows[-1]["reason"], "time")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"ca_loc": fy["ca_loc"]}})
+                saved = json.load(f)
+            self.assertEqual([(it["id"], it["kind"], it["fresh"]) for it in saved["items"]], [("I1", "ca_loc", 100.0)])
 
 
 class GatherPhase2Test(unittest.TestCase):
@@ -533,7 +545,7 @@ class GatherPhase2Test(unittest.TestCase):
                 w,
                 {
                     "player": {"pos": [50, 25]},
-                    "hold": ["keo_neo"],
+                    "hold": _items("keo_neo"),
                     "fish": [{"id": "F1", "kind": "ca_keo", "pos": [50, 25]}],
                     "time_left_ticks": 1,
                 },
@@ -546,7 +558,12 @@ class GatherPhase2Test(unittest.TestCase):
                 ("fish_caught", "ca_keo", g["fish_yield"]["ca_keo"]),
             ])
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"ca_keo": g["fish_yield"]["ca_keo"], "keo_neo": 1}})
+                saved = json.load(f)
+            self.assertEqual([(it["id"], it["kind"]) for it in saved["items"]], [
+                ("I1", "keo_neo"),
+                ("I2", "ca_keo"),
+                ("I3", "ca_keo"),
+            ])
 
     def test_croc_chase_hit_recoil_and_faint(self):
         with Workdir() as w:
@@ -555,7 +572,7 @@ class GatherPhase2Test(unittest.TestCase):
                 w,
                 {
                     "player": {"pos": [60, 24], "hp": 2, "oxygen_ticks": 1800},
-                    "hold": ["ca_loc", "bong_sung", "ca_linh"],
+                    "hold": _items("ca_loc", "bong_sung", "ca_linh"),
                     "fish": [],
                     "random_fish": False,
                     "crocs": [{"id": "M1", "pos": [61, 24], "waypoints": [[60, 24], [64, 24]]}],
@@ -568,10 +585,10 @@ class GatherPhase2Test(unittest.TestCase):
             self.assertEqual(len(hit_evs), 1)
             self.assertEqual(hit_evs[0]["tick"], 1)
             self.assertEqual(hit_evs[0]["data"]["hp"], 1)
-            self.assertEqual(hit_evs[0]["data"]["lost"], ["ca_linh"])  # floor(3/2) = 1 LIFO
+            self.assertEqual([it["id"] for it in hit_evs[0]["data"]["lost"]], ["I3"])  # floor(3/2) = 1 LIFO
             self.assertEqual(hit_evs[0]["data"]["invuln_ticks"], 90)
             s1 = snapshots(rows)[1]
-            self.assertEqual(s1["hold"], ["ca_loc", "bong_sung"])
+            self.assertEqual([it["id"] for it in s1["hold"]], ["I1", "I2"])
             self.assertEqual(s1["crocs"][0]["state"], "recoil")
             self.assertEqual(s1["crocs"][0]["recoil_ticks"], 60)
 
@@ -579,7 +596,7 @@ class GatherPhase2Test(unittest.TestCase):
                 w,
                 {
                     "player": {"pos": [60, 24], "hp": 1, "oxygen_ticks": 1800},
-                    "hold": ["ca_loc", "bong_sung"],
+                    "hold": _items("ca_loc", "bong_sung"),
                     "fish": [],
                     "random_fish": False,
                     "crocs": [{"id": "M1", "pos": [61, 24], "waypoints": [[60, 24], [64, 24]]}],
@@ -591,7 +608,68 @@ class GatherPhase2Test(unittest.TestCase):
             self.assertEqual([e["name"] for e in events(rows_faint)], ["croc_hit", "faint", "gather_end"])
             self.assertEqual(rows_faint[-1]["reason"], "fainted")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
+
+
+class GatherPhase3Test(unittest.TestCase):
+    def test_spoiled_threshold_sample_from_ticket03(self):
+        with Workdir() as w:
+            rows = _run_gather(
+                w,
+                {
+                    "hold": [{"id": "I1", "kind": "ca_linh", "fresh": 30}],
+                    "random_fish": False,
+                    "monsters": [],
+                },
+                ticks=2,
+            )
+            sp = events(rows, "spoiled")
+            self.assertEqual(len(sp), 1)
+            self.assertEqual(sp[0]["tick"], 1)
+            self.assertEqual(sp[0]["data"], {"item_id": "I1", "kind": "ca_linh", "location": "hold"})
+
+    def test_new_item_starts_100_decays_next_tick_and_id_monotonic(self):
+        with Workdir() as w:
+            rows = _run_gather(
+                w,
+                {
+                    "player": {"pos": [12, 0]},
+                    "hold": [{"id": "I2", "kind": "ca_loc", "fresh": 30.009}],
+                    "random_fish": False,
+                    "monsters": [],
+                },
+                input_frames=[{"tick": 0, "interact": True}],
+                ticks=2,
+            )
+            snaps = {r["tick"]: r for r in snapshots(rows)}
+            # Tick 1: I2 decays 30.009 - 0.5/60 = 30.00066 > 30 (not spoiled yet); I3 harvested at 100
+            self.assertEqual([e for e in events(rows, "spoiled") if e["tick"] == 1], [])
+            self.assertEqual([it["id"] for it in snaps[1]["hold"]], ["I2", "I3"])
+            self.assertEqual(snaps[1]["hold"][1]["fresh"], 100.0)
+            # Tick 2: I2 crosses < 30 -> spoiled; I3 decays by 0.5/60 = 0.00833 -> 99.992
+            sp = events(rows, "spoiled")
+            self.assertEqual([(e["tick"], e["data"]["item_id"]) for e in sp], [(2, "I2")])
+            self.assertAlmostEqual(snaps[2]["hold"][1]["fresh"], 99.992, places=3)
+
+    def test_multiple_spoiled_emitted_in_id_order_and_clamped_zero(self):
+        with Workdir() as w:
+            rows = _run_gather(
+                w,
+                {
+                    "hold": [
+                        {"id": "I10", "kind": "bong_sung", "fresh": 30},
+                        {"id": "I2", "kind": "ca_linh", "fresh": 30},
+                        {"id": "I1", "kind": "ca_loc", "fresh": 0.005},
+                    ],
+                    "random_fish": False,
+                    "monsters": [],
+                },
+                ticks=2,
+            )
+            sp = events(rows, "spoiled")
+            self.assertEqual([(e["tick"], e["data"]["item_id"]) for e in sp], [(1, "I2"), (1, "I10")])
+            i1 = next(it for it in snapshots(rows)[2]["hold"] if it["id"] == "I1")
+            self.assertEqual(i1["fresh"], 0.0)
 
 
 if __name__ == "__main__":
