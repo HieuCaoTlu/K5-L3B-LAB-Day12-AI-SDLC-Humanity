@@ -376,8 +376,8 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
                 {
                     "player": {"pos": [20, 10]},
                     "fish": [
-                        {"id": "F10", "kind": "ca_loc", "pos": [20 + cr, 10]},
-                        {"id": "F2", "kind": "ca_linh", "pos": [20 - cr, 10]},
+                        {"id": "F10", "kind": "ca_loc", "pos": [20 + cr - 0.025, 10], "heading_deg": 180},
+                        {"id": "F2", "kind": "ca_linh", "pos": [20 - cr + 0.025, 10], "heading_deg": 0},
                     ],
                 },
                 input_frames=inp_frames,
@@ -464,6 +464,134 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
             self.assertEqual(rows[-1]["reason"], "time")
             with open(inv, encoding="utf-8") as f:
                 self.assertEqual(json.load(f), {"items": {"ca_loc": fy["ca_loc"]}})
+
+
+class GatherPhase2Test(unittest.TestCase):
+    def test_initial_fish_8_distinct_and_periodic_spawn(self):
+        g = tuning_gather()
+        with Workdir() as w:
+            rows0 = _run_gather(w, {}, ticks=0, tag="init")
+            s0 = snapshots(rows0)[0]
+            self.assertEqual(len(s0["fish"]), g["fish_initial_count"])
+            positions = [tuple(f["pos"]) for f in s0["fish"]]
+            self.assertEqual(len(set(positions)), g["fish_initial_count"])
+            self.assertEqual(len(s0["crocs"]), 1)
+            self.assertEqual(s0["crocs"][0]["id"], "M1")
+
+            rows360 = _run_gather(w, {}, ticks=g["fish_spawn_interval_ticks"], snapshot_every=360, tag="spawn")
+            s360 = snapshots(rows360)[-1]
+            self.assertEqual(len(s360["fish"]), g["fish_initial_count"] + 1)
+
+            rows_day3 = _run_gather(w, {"day": 3}, ticks=0, tag="day3")
+            s_day3 = snapshots(rows_day3)[0]
+            self.assertEqual([c["id"] for c in s_day3["crocs"]], ["M1", "M2"])
+
+    def test_fish_swim_corner_reflection_and_turn_at_120(self):
+        g = tuning_gather()
+        turn = g["fish_turn_interval_ticks"]
+        with Workdir() as w:
+            rows = _run_gather(
+                w,
+                {
+                    "player": {"pos": [2, 0]},
+                    "fish": [
+                        {"id": "F1", "kind": "ca_linh", "pos": [95.99, 3.01], "heading_deg": 315},
+                        {"id": "F2", "kind": "ca_loc", "pos": [50, 12], "heading_deg": 0},
+                    ],
+                },
+                ticks=turn,
+            )
+            snaps = {r["tick"]: r for r in snapshots(rows)}
+            f1_t1 = next(f for f in snaps[1]["fish"] if f["id"] == "F1")
+            self.assertGreaterEqual(f1_t1["pos"][0], 4.0)
+            self.assertLessEqual(f1_t1["pos"][0], 96.0)
+            self.assertGreaterEqual(f1_t1["pos"][1], 3.0)
+            self.assertLessEqual(f1_t1["pos"][1], 12.0)
+            self.assertNotAlmostEqual(f1_t1["heading_deg"], 315.0, places=1)
+
+            f2_before = next(f for f in snaps[turn - 1]["fish"] if f["id"] == "F2")
+            f2_at = next(f for f in snaps[turn]["fish"] if f["id"] == "F2")
+            self.assertAlmostEqual(f2_before["heading_deg"], 0.0, places=3)
+            self.assertNotAlmostEqual(f2_at["heading_deg"], 0.0, places=1)
+
+    def test_harvest_keo_neo_and_catch_ca_keo(self):
+        g = tuning_gather()
+        with Workdir() as w:
+            inv = w.path("inv.json")
+            rows_n = _run_gather(
+                w,
+                {"player": {"pos": [76, 0]}},
+                input_frames=[{"tick": 0, "interact": True}],
+                ticks=1,
+                tag="keoneo",
+            )
+            self.assertEqual([(e["name"], e["data"]["kind"]) for e in events(rows_n, "gather")], [
+                ("gather", "keo_neo"),
+            ])
+
+            rows_f = _run_gather(
+                w,
+                {
+                    "player": {"pos": [50, 25]},
+                    "hold": ["keo_neo"],
+                    "fish": [{"id": "F1", "kind": "ca_keo", "pos": [50, 25]}],
+                    "time_left_ticks": 1,
+                },
+                input_frames=[{"tick": 0, "catch": True}],
+                ticks=2,
+                inventory_out=inv,
+                tag="cakeo",
+            )
+            self.assertEqual([(e["name"], e["data"]["kind"], e["data"]["yield"]) for e in events(rows_f, "fish_caught")], [
+                ("fish_caught", "ca_keo", g["fish_yield"]["ca_keo"]),
+            ])
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {"ca_keo": g["fish_yield"]["ca_keo"], "keo_neo": 1}})
+
+    def test_croc_chase_hit_recoil_and_faint(self):
+        with Workdir() as w:
+            inv = w.path("inv.json")
+            rows = _run_gather(
+                w,
+                {
+                    "player": {"pos": [60, 24], "hp": 2, "oxygen_ticks": 1800},
+                    "hold": ["ca_loc", "bong_sung", "ca_linh"],
+                    "fish": [],
+                    "random_fish": False,
+                    "crocs": [{"id": "M1", "pos": [61, 24], "waypoints": [[60, 24], [64, 24]]}],
+                },
+                ticks=5,
+                inventory_out=inv,
+                tag="hit",
+            )
+            hit_evs = events(rows, "croc_hit")
+            self.assertEqual(len(hit_evs), 1)
+            self.assertEqual(hit_evs[0]["tick"], 1)
+            self.assertEqual(hit_evs[0]["data"]["hp"], 1)
+            self.assertEqual(hit_evs[0]["data"]["lost"], ["ca_linh"])  # floor(3/2) = 1 LIFO
+            self.assertEqual(hit_evs[0]["data"]["invuln_ticks"], 90)
+            s1 = snapshots(rows)[1]
+            self.assertEqual(s1["hold"], ["ca_loc", "bong_sung"])
+            self.assertEqual(s1["crocs"][0]["state"], "recoil")
+            self.assertEqual(s1["crocs"][0]["recoil_ticks"], 60)
+
+            rows_faint = _run_gather(
+                w,
+                {
+                    "player": {"pos": [60, 24], "hp": 1, "oxygen_ticks": 1800},
+                    "hold": ["ca_loc", "bong_sung"],
+                    "fish": [],
+                    "random_fish": False,
+                    "crocs": [{"id": "M1", "pos": [61, 24], "waypoints": [[60, 24], [64, 24]]}],
+                },
+                ticks=5,
+                inventory_out=inv,
+                tag="croc_faint",
+            )
+            self.assertEqual([e["name"] for e in events(rows_faint)], ["croc_hit", "faint", "gather_end"])
+            self.assertEqual(rows_faint[-1]["reason"], "fainted")
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {}})
 
 
 if __name__ == "__main__":

@@ -10,24 +10,18 @@
   #menubar { position: fixed; left: 0; top: 0; right: 0; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px;
     background: #1d2b36; border-bottom: 2px solid #3a4f5f; z-index: 10; box-sizing: border-box; }
   #menubar b { margin-right: 8px; color: #ffe082; }
-  #menubar button { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
-  #menubar button:hover:not(:disabled) { background: #3b566b; }
+  #menubar button, #btnRetry { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
+  #menubar button:hover:not(:disabled), #btnRetry:hover:not(:disabled) { background: #3b566b; }
   #menubar button:disabled { opacity: .4; cursor: not-allowed; }
-  #rules { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); width: min(560px, 92vw); max-height: calc(100vh - 80px); overflow: auto;
-    background: #fff8e1; color: #4e342e; border: 3px solid #8d6e63; border-radius: 16px; padding: 14px 18px; z-index: 9; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
-  #rules h3 { margin: 0 0 8px; } #rules ul { margin: 4px 0 8px; padding-left: 20px; } #rules li { margin: 3px 0; }
 </style>
 </head>
 <body>
 <div id="menubar">
-  <b>🛶 Chợ Nổi</b>
-  <button id="btnRules">📖 Luật chơi</button>
   <button id="btnUpg">⬆ Nâng cấp</button>
   <button id="btnNext">▶ Ngày tiếp theo</button>
-  <button id="btnRetry">↻ Làm lại</button>
   <button id="btnNew">⏮ Chơi lại từ đầu</button>
 </div>
-<div id="rules"></div>
+<button id="btnRetry">↻ Bắt đầu lại</button>
 <canvas id="c"></canvas>
 <script>
 "use strict";
@@ -106,7 +100,8 @@ const kc = (k) => KIND_COLOR[k] || "#bbbbbb";
 
 function fit() {
   const dpr = window.devicePixelRatio || 1;
-  const w = innerWidth, h = innerHeight - 44;
+  const barH = document.getElementById("menubar").style.display === "none" ? 0 : 44;
+  const w = innerWidth, h = innerHeight - barH;
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return [w, h];
@@ -1066,46 +1061,45 @@ cv.addEventListener("click", (e) => { if (hitPlayer(e)) toggleUpg(); });
 cv.addEventListener("mousemove", (e) => { if (hitPlayer(e)) cv.style.cursor = "pointer"; });
 addEventListener("keydown", (e) => { if (e.key === "Escape") { upgOpen = false; updateUpg(); } });
 
-// ---------- thanh menu + luật chơi ----------
-const RULES = {
-  quan: `<h3>📖 Luật chơi — buổi tối</h3>
-<ul><li>WASD / mũi tên để đi, <b>E</b> để tương tác với bếp hoặc bàn gần nhất.</li>
-<li>Khách gọi món → đứng gần đúng bếp bấm <b>E</b> để nấu → khi "Xong!" bấm <b>E</b> lấy món → mang tới bàn khách, bấm <b>E</b>.</li>
-<li>Thiếu nguyên liệu: bấm <b>ông Hai</b> để mua (giá cao). Có tiền: bấm <b>Út Sen</b> để nâng cấp.</li>
-<li>Vòng quanh mặt khách là kiên nhẫn: hết thì khách bỏ đi, −0.5 uy tín. Phục vụ nhanh thì được boa.</li>
-<li>Qua ngày mới khách đông hơn và gọi nhiều món hơn (tối đa 5).</li></ul>`,
-  gather: `<h3>📖 Luật chơi — buổi sáng</h3>
-<ul><li>WASD / mũi tên để bơi, <b>E</b> hái nút ở mặt nước hoặc cập bến, <b>Space</b> bắt cá dưới nước.</li>
-<li>Hết oxy dưới nước thì mất Máu; hết Máu là ngất và mất giỏ.</li>
-<li>Giỏ chứa tối đa 12 món. Về bến bấm <b>E</b> để kết thúc buổi.</li></ul>`,
-};
-const rulesEl = document.getElementById("rules");
-function showRules(on) {
-  rulesEl.style.display = on ? "block" : "none";
-  if (on) {
-    rulesEl.innerHTML = (RULES[snap ? snap.mode : "quan"] || RULES.quan) +
-      '<button id="rulesClose" style="padding:5px 14px;border-radius:10px;border:2px solid #8d6e63;background:#ffcc80;cursor:pointer">Đã hiểu</button>';
-    document.getElementById("rulesClose").onclick = () => showRules(false);
-  }
-}
+// ---------- thanh menu ----------
 function postRestart(body) {
   fetch("/restart", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
   lastSent = ""; down.clear(); shopOpen = false; upgOpen = false;
 }
-document.getElementById("btnRules").onclick = () => showRules(rulesEl.style.display !== "block");
 document.getElementById("btnUpg").onclick = toggleUpg;
 document.getElementById("btnNext").onclick = () => postRestart({ next: true });
 document.getElementById("btnRetry").onclick = () => postRestart({});
 document.getElementById("btnNew").onclick = () => postRestart({ new: true });
-let rulesShownOnce = false;
 function updateMenu() {
   if (!snap) return;
-  if (!rulesShownOnce) { rulesShownOnce = true; showRules(true); }
   const multi = snap.day !== undefined;
   const bn = document.getElementById("btnNext"), bw = document.getElementById("btnNew");
+  const bu = document.getElementById("btnUpg"), br = document.getElementById("btnRetry");
+  const mb = document.getElementById("menubar");
   bn.style.display = bw.style.display = multi ? "" : "none";
   bn.disabled = !(snap.finished && snap.reason === "time");
-  document.getElementById("btnUpg").style.display = snap.upgrades ? "" : "none";
+  bu.style.display = snap.upgrades ? "" : "none";
+
+  const isGather = snap.mode !== "quan";
+  const showBar = !isGather || multi || Boolean(snap.upgrades);
+  mb.style.display = showBar ? "flex" : "none";
+  cv.style.marginTop = showBar ? "44px" : "0px";
+  cv.style.height = showBar ? "calc(100vh - 44px)" : "100vh";
+
+  if (isGather) {
+    const hpMax = (snap.player && snap.player.hp_max) ? snap.player.hp_max : 3;
+    br.style.position = "fixed";
+    br.style.left = (345 + hpMax * 22 + 12) + "px";
+    br.style.right = "";
+    br.style.top = (showBar ? 50 : 6) + "px";
+    br.style.zIndex = "11";
+  } else {
+    br.style.position = "fixed";
+    br.style.left = "";
+    br.style.right = "12px";
+    br.style.top = "6px";
+    br.style.zIndex = "11";
+  }
 }
 
 function frame() {
