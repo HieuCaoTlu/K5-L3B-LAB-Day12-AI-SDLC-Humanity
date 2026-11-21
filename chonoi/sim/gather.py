@@ -14,6 +14,7 @@ from .ramp import ramp_velocity
 TICK = 60.0
 AXES = ("x", "d")
 FRESH_SCALE = 240.0
+DOCK_STORAGE_CAPACITY = 20
 
 
 def _reflect(val, vel, lo, hi):
@@ -38,6 +39,7 @@ class GatherSim:
         self.ids = ids
         self.creative = bool(creative)
         self._sprinting = False
+        self.dock_storage = []
         self.day = scenario.get("day", 1)
         self.phase_tick = 0
         p = scenario.get("player", {})
@@ -138,10 +140,10 @@ class GatherSim:
 
     # --- giao diện cho runner -------------------------------------------------
     def inventory_items(self):
-        return hold_to_items(self.hold)
+        return hold_to_items(self.dock_storage + self.hold)
 
     def snapshot(self) -> dict:
-        return {
+        snap = {
             "player": {"pos": self.pos, "vel": self.vel, "heading_deg": self.heading,
                        "oxygen_ticks": self.oxygen_ticks, "oxygen_max_ticks": self.oxygen_max,
                        "hp": self.hp, "hp_max": self.t["hp_max"], "zero_oxy_ticks": self.zero_oxy_ticks,
@@ -157,6 +159,11 @@ class GatherSim:
             "crocs": [{"id": c["id"], "pos": c["pos"], "state": c["state"], "recoil_ticks": c["recoil_ticks"]}
                       for c in sort_by_id(self.crocs)],
         }
+        if self.creative:
+            snap["dock_storage"] = [dict(it) for it in self.dock_storage]
+            snap["dock_count"] = len(self.dock_storage)
+            snap["dock_capacity"] = DOCK_STORAGE_CAPACITY
+        return snap
 
     # --- một bước ---------------------------------------------------------------
     def step(self, inp):
@@ -171,14 +178,15 @@ class GatherSim:
                 n["regrow_ticks"] -= 1
                 if n["regrow_ticks"] == 0:
                     events.append(("node_regrown", {"node_id": n["id"]}))
-        for it in sort_by_id(self.hold):
+        all_stored = [(it, "hold") for it in self.hold] + [(it, "dock") for it in self.dock_storage]
+        for it, loc in sorted(all_stored, key=lambda pair: id_key(pair[0]["id"])):
             iid = it["id"]
             prev_u = self._fresh_u[iid]
             new_u = max(0.0, prev_u - self._decay_u)
             self._fresh_u[iid] = new_u
             it["fresh"] = new_u / FRESH_SCALE
             if prev_u >= self._spoiled_u and new_u < self._spoiled_u:
-                events.append(("spoiled", {"item_id": iid, "kind": it["kind"], "location": "hold"}))
+                events.append(("spoiled", {"item_id": iid, "kind": it["kind"], "location": loc}))
         # 2. bơi + chặn mép + vùng + oxy + ngạt
         self._sprinting = self.creative and bool(inp.held.get("sprint", False))
         was_at_surface = self._at_surface()
@@ -224,9 +232,24 @@ class GatherSim:
         # 3. interact: bến trước, rồi hái
         if inp.pressed("interact"):
             if self._in_dock():
-                self._finish("docked", events)
-                return events
-            if self._at_surface():
+                if not self.creative:
+                    self._finish("docked", events)
+                    return events
+                if self.hold:
+                    space = DOCK_STORAGE_CAPACITY - len(self.dock_storage)
+                    if space <= 0:
+                        events.append(("dock_full", {"dock_count": len(self.dock_storage), "dock_capacity": DOCK_STORAGE_CAPACITY}))
+                    else:
+                        moved = self.hold[:space]
+                        self.dock_storage.extend(moved)
+                        self.hold = self.hold[space:]
+                        events.append(("dock_stored", {
+                            "stored": len(moved),
+                            "dock_count": len(self.dock_storage),
+                            "dock_capacity": DOCK_STORAGE_CAPACITY,
+                            "hold_count": len(self.hold),
+                        }))
+            elif self._at_surface():
                 node = self._nearest_in_range(
                     (n for n in self.nodes if n["regrow_ticks"] == 0),
                     self.t["interact_radius"],
@@ -253,6 +276,10 @@ class GatherSim:
                     events.append(("fish_caught", {"fish_id": fish["id"], "kind": fish["kind"], "yield": amount}))
                 else:
                     events.append(("hold_full", {"action": "catch", "fish_id": fish["id"], "required": amount, "free": free}))
+        # 4b. kết thúc phiên bắt bằng phím Q (chỉ creative)
+        if self.creative and inp.pressed("end_gather"):
+            self._finish("docked", events)
+            return events
         # 5. hết giờ
         if self.time_left_ticks <= 0:
             self._finish("time", events)

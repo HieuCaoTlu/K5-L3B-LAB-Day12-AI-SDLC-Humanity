@@ -699,5 +699,58 @@ class GatherCreativeSprintTest(unittest.TestCase):
         self.assertEqual(snap["player"]["oxygen_ticks"], 80)
 
 
+class GatherCreativeDockStorageTest(unittest.TestCase):
+    def test_dock_storage_up_to_20_and_q_ends_gather_combining_hold(self):
+        tuning = load_contract()["tuning"]
+        sess = Session(
+            "gather", tuning,
+            {"hold": _items(*(["ca_loc"] * 12)), "random_fish": False},
+            1, creative=True,
+        )
+        li = LiveInputs(buttons=("interact", "catch", "sprint", "end_gather"))
+        # Lần 1: bấm E tại bến -> cất 12 món vào kho bến, giỏ về 0
+        li.set(interact=True)
+        evs1 = sess.step(li.advance())
+        self.assertFalse(sess.done)
+        self.assertEqual([e["name"] for e in evs1], ["dock_stored"])
+        s1 = sess.snapshot()
+        self.assertEqual(s1["dock_count"], 12)
+        self.assertEqual(s1["dock_capacity"], 20)
+        self.assertEqual(s1["hold_count"], 0)
+
+        # Thêm 10 món nữa vào giỏ rồi bấm E -> chỉ cất thêm 8 (đủ 20), giữ 2 lại trong giỏ
+        li.set(interact=False)
+        sess.step(li.advance())
+        sess.sim._add_hold_items("bong_sung", 10)
+        li.set(interact=True)
+        evs2 = sess.step(li.advance())
+        self.assertEqual([e["name"] for e in evs2], ["dock_stored"])
+        s2 = sess.snapshot()
+        self.assertEqual(s2["dock_count"], 20)
+        self.assertEqual(s2["hold_count"], 2)
+
+        # Bấm E khi kho bến đã đủ 20 -> báo dock_full, không kết thúc
+        li.set(interact=False)
+        sess.step(li.advance())
+        li.set(interact=True)
+        evs3 = sess.step(li.advance())
+        self.assertFalse(sess.done)
+        self.assertEqual([e["name"] for e in evs3], ["dock_full"])
+
+        # Bấm Q (end_gather) -> kết thúc phiên bắt và gộp cả 20 món ở bến + 2 món đang giữ = 22
+        li.set(interact=False, end_gather=True)
+        evs4 = sess.step(li.advance())
+        self.assertTrue(sess.done)
+        self.assertEqual([e["name"] for e in evs4], ["gather_end"])
+        self.assertEqual(evs4[0]["data"]["reason"], "docked")
+        self.assertEqual(len(evs4[0]["data"]["inventory"]["items"]), 22)
+
+    def test_q_ignored_in_non_creative_mode(self):
+        tuning = load_contract()["tuning"]
+        sess = Session("gather", tuning, {"random_fish": False}, 1, creative=False)
+        sess.step(InputState((0.0, 0.0), {"end_gather": True}, {"end_gather"}))
+        self.assertFalse(sess.done)
+
+
 if __name__ == "__main__":
     unittest.main()

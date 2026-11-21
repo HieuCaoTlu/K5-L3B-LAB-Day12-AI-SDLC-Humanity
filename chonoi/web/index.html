@@ -619,7 +619,7 @@ function currentInput() {
   const dx = (down.has("r") ? 1 : 0) - (down.has("l") ? 1 : 0);
   let dy = (down.has("d") ? 1 : 0) - (down.has("u") ? 1 : 0);   // gather: xuống = d dương
   if (mode === "quan") dy = -dy;                                // quan: lên (bắc) = z dương
-  return { move: [dx, dy], interact: down.has("interact"), catch: down.has("catch"), sprint: down.has("sprint") };
+  return { move: [dx, dy], interact: down.has("interact"), catch: down.has("catch"), sprint: down.has("sprint"), end_gather: down.has("end_gather") };
 }
 function pushInput() {
   const s = JSON.stringify(currentInput());
@@ -647,6 +647,7 @@ addEventListener("keydown", (e) => {
   else if (k === "e") down.add("interact");
   else if (k === " ") { down.add("catch"); e.preventDefault(); }
   else if (k === "shift") down.add("sprint");
+  else if (k === "q") down.add("end_gather");
   pushInput();
 });
 addEventListener("keyup", (e) => {
@@ -655,6 +656,7 @@ addEventListener("keyup", (e) => {
   else if (k === "e") down.delete("interact");
   else if (k === " ") down.delete("catch");
   else if (k === "shift") down.delete("sprint");
+  else if (k === "q") down.delete("end_gather");
   pushInput();
 });
 addEventListener("blur", () => { down.clear(); pushInput(); });
@@ -1322,7 +1324,11 @@ function gatherHudBottom(w, h, bottom) {
       }
     }
   }
-  htext("WASD bơi · E hái/cập bến · Space bắt · Enter chơi lại · L nhật ký", w - 14, y0 + bottom / 2 - 1, { size: 13, align: "right", color: "#e8d3a6" });
+  if (snap.dock_capacity !== undefined) {
+    const dc = snap.dock_count || 0, dcap = snap.dock_capacity;
+    htext("BẾN " + dc + "/" + dcap, w - 14, y0 + 16, { size: 13, align: "right", color: dc >= dcap ? "#ff9a8a" : GC.gold });
+  }
+  htext("WASD bơi · Shift nhanh · E cất/hái · Space bắt · Q kết thúc · L nhật ký", w - 14, y0 + bottom / 2 + 6, { size: 12, align: "right", color: "#e8d3a6" });
 }
 
 // ---------- phản hồi sự kiện: chữ nổi, bọt nước, nháy đỏ ----------
@@ -1334,6 +1340,8 @@ function fxOf(e, p) {
     case "fish_caught": return { text: "+" + d.yield + " " + name(d.kind), color: "#c8f7ff", at };
     case "spoiled": return { text: name(d.kind) + " bị ươn rồi!", color: "#e0b070", at, small: true };
     case "hold_full": return { text: "Giỏ đầy! (cần " + d.required + ", còn " + d.free + ")", color: "#ffb4a8", at };
+    case "dock_stored": return { text: "Cất +" + d.stored + " vào bến (" + d.dock_count + "/" + d.dock_capacity + ")", color: GC.gold, at };
+    case "dock_full": return { text: "Kho bến đầy! (" + d.dock_count + "/" + d.dock_capacity + ")", color: "#ffb4a8", at };
     case "oxygen_empty": return { text: "Hết oxy! Ngoi lên mau!", color: "#ff8a80", at, big: true };
     case "choke": return { text: "Ngạt nước! −1 ♥", color: "#ff5252", at, big: true, flash: true };
     case "croc_hit": return { text: "Cá sấu cắn! −1 ♥" + (d.lost && d.lost.length ? " (rơi " + d.lost.map(name).join(", ") + ")" : ""), color: "#ff5252", at, big: true, flash: true };
@@ -1392,7 +1400,10 @@ function gatherHint(p, meta) {
     if (f) return p.catch_cd_ticks > 0 ? ["Đợi hồi chiêu…", "#e0c58f"] : ["Space · bắt " + (KIND_NAME[f.kind] || f.kind), GC.oxy];
     return null;
   }
-  if (meta.dock_pos && d(meta.dock_pos) <= (meta.dock_radius || 3)) return ["E · cập bến (kết thúc buổi)", GC.gold];
+  if (meta.dock_pos && d(meta.dock_pos) <= (meta.dock_radius || 3)) {
+    if (snap.dock_capacity !== undefined) return ["E · cất giỏ vào bến (" + (snap.dock_count || 0) + "/" + snap.dock_capacity + ") · Q kết thúc", GC.gold];
+    return ["E · cập bến (kết thúc buổi)", GC.gold];
+  }
   const near = (snap.nodes || []).filter((q) => d(q.pos) <= (meta.interact_radius || 2)).sort((a, b) => d(a.pos) - d(b.pos))[0];
   if (near) return near.ready !== false ? ["E · hái " + (KIND_NAME[near.kind] || near.kind), "#fff3b0"] : ["Chưa nở (" + Math.ceil((near.regrow_ticks || 0) / 60) + "s)", "#e0c58f"];
   return null;
