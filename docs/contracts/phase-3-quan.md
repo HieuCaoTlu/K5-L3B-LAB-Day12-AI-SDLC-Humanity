@@ -5,7 +5,7 @@ Người giữ: Hiếu (`sim/quan`). Nguồn: TICKET-03, Test Contract v1.2.
 ## Trạng thái v1.2
 `game.contract.json` đã có `contract_version:"1.2"` và khối `freshness`. File kho là mảng cá thể; file kho đếm trả mã 2. Quán và `read_inventory(path, fresh=True)` đã chọn schema theo `"freshness" in tuning` (nối vào `headless.py`, `live.py`).
 
-**Cầu nối TẠM ở `gather` (cần người làm gather thay):** `GatherSim.inventory_items()` khi có `freshness` trả mỗi món trong giỏ thành một cá thể tươi 100, id `I1, I2…` theo thứ tự nhặt (id chưa nối tiếp xuyên ngày). Chưa có: giỏ cá thể thật, hao tươi 0.5/s, `spoiled` ở giỏ (location `hold`), `lost` là mảng cá thể, `gather.hold` trong scenario dạng mảng cá thể.
+**Gather (Tùng, PR #8/#9) đã có giỏ cá thể thật** (hao tươi, `spoiled` ở giỏ, ghi kho cá thể); cầu nối tạm tôi từng thêm đã bỏ. `inventory.py` giữ cả hai schema (v1.1 đếm, v1.2 cá thể) và API của gather: `validate_items` (v1.2, mảng cá thể), `hold_to_items`, `write_inventory` nhận mảng cá thể; kho đếm dùng `validate_count_items`. Quán đọc `fresh` bằng `Fraction` qua `read_inventory(path, fresh=True)`.
 
 ## Phần quán đã làm
 - **Kho cá thể** `{id, kind, fresh}`; `fresh` là `Fraction` (chính xác ở ngưỡng 30). File kho: `chonoi/inventory.py` (`validate_item_list`, `read_inventory(fresh=True)`, `write_inventory_items`; ghi nguyên tử, sắp theo id, làm tròn 6 chữ số).

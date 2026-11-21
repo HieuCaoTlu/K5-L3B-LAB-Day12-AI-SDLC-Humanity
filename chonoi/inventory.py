@@ -16,12 +16,13 @@ import tempfile
 from fractions import Fraction
 
 from .errors import BadInput
-from .ids import id_key
+from .ids import id_key, sort_by_id
 
 KINDS_P1 = ("ca_loc", "ca_linh", "bong_dien_dien", "bong_sung", "ca_keo", "keo_neo")  # v1.1 thêm ca_keo, keo_neo
 
 
-def validate_items(items, kinds=KINDS_P1):
+def validate_count_items(items, kinds=KINDS_P1):
+    """v1.0/v1.1: kho đếm {kind: n}."""
     if not isinstance(items, dict):
         raise BadInput("items phải là object")
     out = {}
@@ -72,11 +73,22 @@ def read_inventory(path: str, kinds=KINDS_P1, fresh=False):
         raise BadInput("file kho chỉ được có khóa gốc 'items'")
     if fresh:
         return validate_item_list(data["items"], kinds)
-    return validate_items(data["items"], kinds)
+    return validate_count_items(data["items"], kinds)
 
 
-def hold_to_items(hold: list) -> dict:
-    """Khoang (mảng id theo thứ tự nhặt) -> object đếm, sắp theo id nguyên liệu."""
+def validate_items(items, kinds=KINDS_P1):
+    """v1.2: kho cá thể -> list {id, kind, fresh} sắp theo id (fresh giữ nguyên số đã đọc). Dùng cho scenario (hold, stock)."""
+    return sort_by_id([{"id": it["id"], "kind": it["kind"], "fresh": float(it["fresh"])}
+                       for it in validate_item_list(items, kinds)])
+
+
+def hold_to_items(hold: list):
+    """Giỏ -> kho xuất. Phần tử là cá thể {id, kind, fresh} (v1.2) -> mảng cá thể sắp theo id;
+    phần tử là chuỗi loại (v1.1) -> object đếm sắp theo loại."""
+    if hold and not isinstance(hold[0], str):
+        return sort_by_id([{"id": it["id"], "kind": it["kind"], "fresh": it["fresh"]} for it in hold])
+    if not hold:
+        return []
     counts = {}
     for k in hold:
         counts[k] = counts.get(k, 0) + 1
@@ -117,7 +129,11 @@ def _atomic_write(path: str, obj):
         raise
 
 
-def write_inventory(path: str, items: dict):
+def write_inventory(path: str, items):
+    """Ghi kho: list cá thể (v1.2) hoặc dict đếm (v1.1)."""
+    if isinstance(items, list):
+        _atomic_write(path, {"items": items_to_json(items)})
+        return
     items = {k: items[k] for k in sorted(items) if items[k] > 0}
     _atomic_write(path, {"items": items})
 
