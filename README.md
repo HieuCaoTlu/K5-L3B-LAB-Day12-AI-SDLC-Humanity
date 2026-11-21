@@ -27,6 +27,11 @@ Game cần chế độ **headless** theo Test Contract (`python3 -m chonoi.headl
 
 Ngoài phần đề yêu cầu, nhóm được **thêm** nhân vật, loài cá/cây, sinh vật, món, bản đồ, cơ chế, câu chuyện, đồ họa, âm nhạc… với ba điều kiện: **không phá phần cố định** (tắt ở headless), ghi mục **"Sáng tạo của nhóm"** trong README của nhóm, và **làm lõi đúng trước**.
 
+### Sáng tạo của nhóm
+- **Bơi nhanh (`Shift`) ở buổi sáng (`gather`)**: Khi giữ phím `Shift` trong chế độ chơi trực tiếp (`python3 -m chonoi.live --mode gather`), Út Sen tăng tốc độ bơi gấp **1.5×** (`swim_speed * 1.5`) nhưng tiêu hao oxy nhanh gấp **2×** (`2` tick/tick khi dưới nước).
+- **Bảo đảm đúng Test Contract**: Tính năng chỉ bật khi `creative=True` ở `chonoi.live`; ở chế độ `headless` (`creative=False`) nút `sprint` bị vô hiệu hóa hoàn toàn và `BUTTONS_V10` của `chonoi/inputs.py` vẫn giữ nguyên (`interact`, `catch`).
+- **Bằng chứng lõi vẫn đúng**: `GatherCreativeSprintTest` trong `tests/test_gather.py` cùng bộ test smoke/unit/live/team-check (`python -m unittest tests.test_gather tests.test_smoke_p1 tests.test_python_starter_units tests.test_live tests.test_team_check -v`) đạt **58/58 PASS**.
+
 ## Lịch 3 giờ
 
 | Mốc | Phase | Hạn tag |
