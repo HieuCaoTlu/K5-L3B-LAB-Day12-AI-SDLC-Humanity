@@ -62,9 +62,9 @@
   <button id="btnAudioCfg" title="Cài đặt âm lượng">🎚</button>
 </div>
 <div id="audioPanel">
-  <div style="font-weight:700;color:#ffe082;margin-bottom:6px">🎵 Âm thanh Quán (Buổi tối)</div>
+  <div style="font-weight:700;color:#ffe082;margin-bottom:6px">🎵 Âm thanh (sáng &amp; tối)</div>
   <label><span>Nhạc nền</span><input id="volBgm" type="range" min="0" max="100" value="44"></label>
-  <label><span>Sông đêm</span><input id="volAmb" type="range" min="0" max="100" value="30"></label>
+  <label><span>Môi trường</span><input id="volAmb" type="range" min="0" max="100" value="30"></label>
   <label><span>Hiệu ứng</span><input id="volSfx" type="range" min="0" max="100" value="80"></label>
   <div style="display:flex;gap:6px;justify-content:space-between">
     <button id="btnAudioTest">🔔 Thử chuông</button>
@@ -598,8 +598,342 @@
 
   loadPrefs();
   ["keydown", "pointerdown", "click"].forEach((ev) => global.addEventListener(ev, unlock, { passive: true }));
-  global.QuanAudio = { unlock, setScene, playSfx, setMuted, toggleMute, setVolume, getState, onStateChange };
+  global.QuanAudio = { unlock, setScene, playSfx, setMuted, toggleMute, setVolume, getState, onStateChange,
+    // dùng chung cho GatherAudio (buổi sáng): cùng AudioContext, cùng kênh bgm/amb/sfx, cùng tắt/bật
+    _engine: { st, ensureCtx, routeOut, toneSfx, playPerc, playDanTranh, playSaoTruc, playMarimba, playBass } };
 })(window);
+// ---------- Âm thanh phần Lặn & Hái (buổi sáng) — dùng chung bộ máy QuanAudio (cùng tắt/bật M, cùng 3 thanh âm lượng) ----------
+// Chỉ là âm thanh UI: đọc snapshot/sự kiện, không đi vào sim. Ngẫu nhiên ở đây (Math.random) không ảnh hưởng headless.
+(function (global) {
+  const QA = global.QuanAudio;
+  if (!QA || !QA._engine) return;
+  const E = QA._engine, st = E.st;
+  const NOTE = { C: 0, "C#": 1, D: 2, "D#": 3, E: 4, F: 5, "F#": 6, G: 7, "G#": 8, A: 9, "A#": 10, Bb: 10, B: 11 };
+  const nhz = (n) => { const m = /^([A-G][#b]?)(-?\d)$/.exec(n); return 440 * Math.pow(2, ((+m[2] + 1) * 12 + NOTE[m[1]] - 69) / 12); };
+
+  // "Sớm mai trên sông" — D ngũ cung (D E F# A B), 16 ô nhịp ~84 BPM.
+  // Trên mặt nước: đàn bầu dẫn (luyến, nhấn, rung), kalimba rải hợp âm, pad ấm, bass mềm, mõ/shaker thưa, sáo láy như chim.
+  // Dưới nước: lớp riêng (pad trầm có lọc "thở" + chuông vọng xa có tiếng vang), không bị lọc đục như bản trên mặt nước.
+  const BEAT = 0.714, BEATS = 64;
+  const CHORDS = [   // [bass, [3 nốt pad]] mỗi ô nhịp — giữ trong thang ngũ cung
+    ["D2", ["D3", "F#3", "A3"]], ["B1", ["B2", "D3", "F#3"]], ["G2", ["B2", "D3", "F#3"]], ["A1", ["B2", "E3", "A3"]],
+    ["D2", ["D3", "F#3", "A3"]], ["E2", ["E3", "A3", "B3"]], ["G2", ["B2", "D3", "F#3"]], ["A1", ["B2", "E3", "A3"]],
+    ["B1", ["B2", "D3", "F#3"]], ["G2", ["B2", "D3", "F#3"]], ["D2", ["D3", "F#3", "A3"]], ["A1", ["B2", "E3", "A3"]],
+    ["G2", ["B2", "D3", "F#3"]], ["A1", ["B2", "E3", "A3"]], ["D2", ["D3", "F#3", "A3"]], ["D2", ["D3", "F#3", "A3"]],
+  ];
+  // Đàn bầu: [phách, nốt, độ dài (phách), lực, kiểu nhấn] — 0 thường · 1 luyến từ dưới lên · 2 rung rộng · 3 nhấn (xuống rồi lên)
+  const BAU = [
+    [0, "A4", 1.5, .80, 1], [1.5, "B4", .5, .70, 0], [2, "D5", 2, .85, 2], [4, "E5", 1, .80, 0], [5, "D5", .5, .70, 0], [5.5, "B4", .5, .70, 0], [6, "A4", 2, .80, 3],
+    [8, "F#4", 1, .75, 1], [9, "A4", 1, .78, 0], [10, "B4", 1.5, .80, 0], [11.5, "A4", .5, .70, 0], [12, "D5", 3.5, .85, 2],
+    [16, "F#5", 1.5, .85, 1], [17.5, "E5", .5, .75, 0], [18, "D5", 1, .80, 0], [19, "E5", 1, .80, 0], [20, "A5", 2, .88, 2], [22, "F#5", 1, .80, 3], [23, "E5", 1, .75, 0],
+    [24, "D5", 1, .78, 0], [25, "B4", 1, .75, 1], [26, "A4", 1.5, .78, 0], [27.5, "B4", .5, .70, 0], [28, "A4", 3.5, .80, 2],
+    [32, "B4", 2, .78, 1], [34, "D5", 1, .80, 0], [35, "B4", 1, .72, 0], [36, "A4", 1.5, .78, 3], [37.5, "F#4", .5, .70, 0], [38, "E4", 2, .75, 2],
+    [40, "F#4", 1, .75, 0], [41, "A4", 1, .78, 1], [42, "B4", 1, .80, 0], [43, "D5", 1, .82, 0], [44, "E5", 3.5, .85, 2],
+    [48, "D5", 1, .80, 1], [49, "E5", 1, .82, 0], [50, "F#5", 1, .84, 0], [51, "A5", 1, .88, 1], [52, "B5", 2, .90, 2], [54, "A5", 1, .82, 3], [55, "F#5", 1, .78, 0],
+    [56, "E5", 1.5, .80, 0], [57.5, "D5", .5, .74, 0], [58, "B4", 1, .76, 1], [59, "A4", 1, .76, 0], [60, "D5", 4, .82, 2],
+  ];
+  const BIRD = [14.5, 30.5, 46.5, 62.5];   // sáo trúc láy ngắn như tiếng chim ở cuối mỗi câu
+
+  function danBau(t, freq, prev, dur, vel, orn) {   // đàn bầu: âm bồi gần như sin, lướt cao độ bằng cần đàn, vibrato rộng
+    const c = st.ctx, env = c.createGain(), lp = c.createBiquadFilter(), vib = c.createOscillator(), vg = c.createGain();
+    const f0 = prev && Math.abs(Math.log2(prev / freq)) < 1 ? prev : freq;   // luyến từ nốt trước (trong 1 quãng tám)
+    const oscs = [["sine", 1, 1], ["triangle", 2, 0.16]].map(([type, m, amp]) => {
+      const o = c.createOscillator(), a = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0 * m, t);
+      if (f0 !== freq) o.frequency.exponentialRampToValueAtTime(freq * m, t + 0.09);
+      if (orn === 1) { o.detune.setValueAtTime(-160, t); o.detune.linearRampToValueAtTime(0, t + 0.17); }
+      if (orn === 3 && dur > 0.5) { o.detune.setValueAtTime(0, t + dur * 0.35); o.detune.linearRampToValueAtTime(-90, t + dur * 0.5); o.detune.linearRampToValueAtTime(0, t + dur * 0.66); }
+      a.gain.value = amp; o.connect(a); a.connect(lp); vg.connect(o.detune); return o;
+    });
+    vib.frequency.value = 5.3; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(orn === 2 ? 30 : 11, t + Math.min(dur * 0.6, 0.55));
+    vib.connect(vg);
+    lp.type = "lowpass"; lp.frequency.value = 2600; lp.connect(env);
+    const dk = Math.min(0.3, dur * 0.5);
+    env.gain.setValueAtTime(0.0001, t); env.gain.linearRampToValueAtTime(0.21 * vel, t + 0.012);
+    env.gain.exponentialRampToValueAtTime(0.12 * vel, t + dk); env.gain.setTargetAtTime(0.0001, t + dur, 0.14);
+    E.routeOut(c, env, st.bgm, 0.06, 0.24);
+    noiseHit(t, { type: "bandpass", f0: Math.min(5000, freq * 3), q: 3, dur: 0.03, gain: 0.05 * vel, dest: st.bgm });   // tiếng gảy
+    oscs.concat([vib]).forEach((o) => { o.start(t); o.stop(t + dur + 0.8); });
+  }
+  function kalimba(t, freq, vel) {                  // phiến kim loại: cơ bản + bồi cao tắt nhanh
+    tone(t, { f0: freq, dur: 0.9, gain: 0.12 * vel, dest: st.bgm, rev: 0.16, pan: -0.12 });
+    tone(t, { f0: freq * 5.4, dur: 0.12, gain: 0.04 * vel, dest: st.bgm, pan: -0.12 });
+  }
+  function bell(t, freq, vel, dest) {               // chuông xa: các bồi không hài hòa, tắt chậm
+    [[1, .11, 2.4], [2.76, .05, 1.5], [5.4, .025, .8], [8.93, .012, .45]].forEach(([m, a, d]) => tone(t, { f0: freq * m, dur: d, gain: a * vel, dest, att: 0.006 }));
+  }
+  function pad(t, freqs, dur, gain, dest, cutoff, breathe) {   // pad: tam giác lệch nhẹ, vào/ra chậm; dưới nước lọc "thở"
+    const c = st.ctx, lp = c.createBiquadFilter(), env = c.createGain(), end = t + dur + 1.4;
+    lp.type = "lowpass"; lp.frequency.value = cutoff;
+    if (breathe) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 0.12; lg.gain.value = cutoff * 0.5; l.connect(lg); lg.connect(lp.frequency); l.start(t); l.stop(end); }
+    freqs.forEach((f) => [-7, 7].forEach((dt) => { const o = c.createOscillator(); o.type = "triangle"; o.frequency.value = f; o.detune.value = dt; o.connect(lp); o.start(t); o.stop(end); }));
+    env.gain.setValueAtTime(0.0001, t); env.gain.linearRampToValueAtTime(gain, t + Math.min(1.1, dur * 0.4));
+    env.gain.setValueAtTime(gain, t + dur); env.gain.linearRampToValueAtTime(0.0001, t + dur + 1.3);
+    lp.connect(env); env.connect(dest);
+  }
+  const KIND_NOTE = { bong_sung: "A5", bong_dien_dien: "B5", keo_neo: "E5", ca_linh: "D6", ca_loc: "G5", ca_keo: "E6" };
+
+  const g = {
+    on: false, timer: null, beat: 0, nextT: 0, nodes: null, chase: null, lastBau: null,
+    underwater: false, depth: 0, oxy: 1, choking: false, chaseOn: false, finished: false, moving: false,
+    nextHeart: 0, nextAmbEvt: 0, nextStroke: 0, lowOxyWarned: false,
+  };
+  const ok = () => st.unlocked && !st.muted && st.ctx;
+
+  // Chèn lọc thấp vào đường nhạc nền + vang: dưới nước nghe "đục". Ở quán lọc mở hết (20 kHz) nên không đổi gì.
+  function wire() {
+    if (st.gWire || !E.ensureCtx()) return;
+    const c = st.ctx;
+    const duck = c.createGain(), lp = c.createBiquadFilter(), lpRev = c.createBiquadFilter();
+    lp.type = lpRev.type = "lowpass"; lp.frequency.value = lpRev.frequency.value = 20000; lp.Q.value = lpRev.Q.value = 0.7;
+    st.bgm.disconnect(); st.bgm.connect(duck); duck.connect(lp); lp.connect(st.master);
+    st.rev.disconnect(); st.rev.connect(lpRev); lpRev.connect(st.master);
+    const uw = c.createGain(), uwVol = c.createGain(), dl = c.createDelay(1.0), fb = c.createGain(), dlf = c.createBiquadFilter();
+    uw.gain.value = 0; uwVol.gain.value = st.bgmVol;
+    dl.delayTime.value = 0.36; fb.gain.value = 0.38; dlf.type = "lowpass"; dlf.frequency.value = 1800;
+    uw.connect(uwVol); uw.connect(dl); dl.connect(dlf); dlf.connect(fb); fb.connect(dl); dlf.connect(uwVol); uwVol.connect(st.master);
+    st.gWire = { duck, lp, lpRev, uw, uwVol };
+  }
+  function noiseHit(t, o) {   // tiếng ồn có lọc: nước bắn, lá xào xạc, vợt vút, ngoạm...
+    if (!st.noise) return;
+    const c = st.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), gg = c.createGain();
+    s.buffer = st.noise; f.type = o.type || "bandpass"; f.Q.value = o.q || 1;
+    f.frequency.setValueAtTime(o.f0, t);
+    if (o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t + o.dur);
+    gg.gain.setValueAtTime(0.0001, t); gg.gain.linearRampToValueAtTime(o.gain, t + (o.att || 0.008));
+    gg.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+    s.connect(f); f.connect(gg); E.routeOut(c, gg, o.dest || st.sfx, o.pan || 0, o.rev || 0);
+    s.start(t, Math.random() * 1.4, o.dur + 0.05);
+  }
+  const tone = (t, o) => E.toneSfx(st.ctx, o.dest || st.sfx, Object.assign({ t }, o));
+
+  // ---- nhạc nền: lên lịch từng phách ----
+  function scheduleBeat(b, t0) {
+    const c = st.ctx, bar = b >> 2, inBar = b & 3, [bass, tones] = CHORDS[bar], tf = tones.map(nhz), uw = st.gWire && st.gWire.uw;
+    if (inBar === 0) {
+      pad(t0, tf, BEAT * 4, 0.035, st.bgm, 1400, false);                                   // pad ấm trên mặt nước
+      E.playBass(c, nhz(bass), t0, BEAT * 1.8, 0.62);
+      if (bar % 2 === 0) E.playPerc(c, "mo", t0, 0.38);
+      if (uw) {
+        if (bar % 2 === 0) pad(t0, tf.map((f) => f / 2), BEAT * 8, 0.07, uw, 700, true);  // pad trầm dưới nước (2 ô nhịp)
+        bell(t0 + 0.02, tf[bar % 3] * 4, 0.9, uw);                                         // chuông vọng xa
+      }
+    }
+    if (inBar === 2) {
+      E.playBass(c, nhz(bass) * 1.4983, t0, BEAT * 1.2, 0.42);
+      if (uw && bar % 2 === 1) bell(t0, tf[(bar + 1) % 3] * 4, 0.55, uw);
+    }
+    const pat = [0, 1, 2, 1];                                                               // kalimba rải hợp âm, 2 ô nhịp đầu thưa
+    if (!(bar < 2 && inBar % 2 === 1)) {
+      kalimba(t0, tf[pat[inBar]] * 4, 0.9);
+      kalimba(t0 + BEAT * 0.5, tf[(pat[inBar] + 1) % 3] * 4, 0.6);
+    }
+    if (inBar === 1 || inBar === 3) E.playPerc(c, "shaker", t0 + BEAT * 0.5, 0.16);
+    BAU.forEach(([nb, n, d, v, orn]) => {
+      if (nb >= b && nb < b + 1) { const f = nhz(n); danBau(t0 + (nb - b) * BEAT, f, g.lastBau, d * BEAT, v, orn); g.lastBau = f; }
+    });
+    BIRD.forEach((bb) => {
+      if (bb >= b && bb < b + 1) ["A5", "B5", "A5", "D6"].forEach((n, i) => E.playSaoTruc(c, nhz(n), t0 + (bb - b) * BEAT + i * 0.09, 0.11, 0.42, null));
+    });
+  }
+  // ---- môi trường: 2 lớp nền liên tục, trộn theo trên / dưới nước ----
+  function startAmb() {
+    if (g.nodes || !st.noise) return;
+    const c = st.ctx, mk = (type, f, q, lfoHz, lfoAmt, gain) => {
+      const s = c.createBufferSource(), fl = c.createBiquadFilter(), lfo = c.createOscillator(), lg = c.createGain(), gg = c.createGain();
+      s.buffer = st.noise; s.loop = true; fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+      lfo.frequency.value = lfoHz; lg.gain.value = lfoAmt; lfo.connect(lg); lg.connect(fl.frequency);
+      gg.gain.value = 0; s.connect(fl); fl.connect(gg); gg.connect(st.amb);
+      s.start(0, Math.random() * 1.5); lfo.start(); return { s, lfo, gg, gain };
+    };
+    g.nodes = {
+      lap: mk("bandpass", 520, 0.9, 0.3, 160, 0.20),      // sóng vỗ mạn
+      wind: mk("highpass", 2600, 0.5, 0.11, 600, 0.05),   // gió lùa lá dừa
+      deep: mk("lowpass", 170, 0.8, 0.07, 60, 0.42),      // tiếng ù dưới nước
+    };
+  }
+  function stopAmb() {
+    if (!g.nodes) return;
+    const t = st.ctx.currentTime;
+    Object.values(g.nodes).forEach((n) => { n.gg.gain.setTargetAtTime(0, t, 0.2); try { n.s.stop(t + 1); n.lfo.stop(t + 1); } catch (e) {} });
+    g.nodes = null;
+  }
+  function ambEvent(t) {   // sự kiện lẻ: chim hót (trên) / bọt lách tách (dưới)
+    if (!g.underwater) {
+      const f = 2600 + Math.random() * 1400, n = 2 + Math.floor(Math.random() * 3), pan = Math.random() * 1.2 - 0.6;
+      for (let i = 0; i < n; i++) tone(t + i * 0.11, { f0: f, f1: f * (1.25 + Math.random() * 0.3), slideDur: 0.06, dur: 0.08, gain: 0.05, pan, dest: st.amb, rev: 0.25 });
+    } else {
+      const n = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) { const f = 380 + Math.random() * 500; tone(t + i * 0.07, { f0: f, f1: f * 2.2, slideDur: 0.05, dur: 0.06, gain: 0.07, pan: Math.random() - 0.5, dest: st.amb }); }
+    }
+  }
+  // ---- lớp căng thẳng khi cá sấu đuổi: dây rung dissonant liên tục + nhịp trầm dồn ----
+  function chaseLayer(on) {
+    const c = st.ctx, t = c.currentTime;
+    if (on && !g.chase) {
+      const gg = c.createGain(), lp = c.createBiquadFilter(), trem = c.createOscillator(), tg = c.createGain();
+      lp.type = "lowpass"; lp.frequency.value = 900; gg.gain.value = 0;
+      trem.frequency.value = 9; tg.gain.value = 0.35; trem.connect(tg); tg.connect(gg.gain);
+      const os = [110, 155.6, 233.1].map((f) => { const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.connect(lp); o.start(); return o; });
+      lp.connect(gg); gg.connect(st.sfx); trem.start();
+      gg.gain.setTargetAtTime(0.05, t, 0.25);
+      g.chase = { gg, os, trem };
+    } else if (!on && g.chase) {
+      const ch = g.chase; g.chase = null;
+      ch.gg.gain.setTargetAtTime(0, t, 0.3);
+      ch.os.concat([ch.trem]).forEach((o) => { try { o.stop(t + 1.5); } catch (e) {} });
+    }
+  }
+  function heart(t, strong) {
+    tone(t, { f0: 70, f1: 46, dur: 0.13, gain: strong ? 0.42 : 0.3 });
+    tone(t + 0.17, { f0: 62, f1: 42, dur: 0.12, gain: strong ? 0.32 : 0.22 });
+  }
+
+  function tick() {
+    if (!g.on || !st.unlocked || !st.ctx) return;
+    const c = st.ctx, now = c.currentTime;
+    // nhạc nền (dừng khi buổi đã kết thúc)
+    if (!g.finished) {
+      if (g.nextT < now - 0.35) g.nextT = now + 0.05;
+      while (g.nextT < now + 0.2) { scheduleBeat(g.beat, g.nextT); g.beat = (g.beat + 1) % BEATS; g.nextT += BEAT; }
+    }
+    // trộn môi trường + lọc nhạc theo độ sâu, cá sấu
+    if (g.nodes) {
+      const n = g.nodes, w = g.underwater;
+      n.lap.gg.gain.setTargetAtTime(w ? 0 : n.lap.gain, now, 0.25);
+      n.wind.gg.gain.setTargetAtTime(w ? 0 : n.wind.gain, now, 0.25);
+      n.deep.gg.gain.setTargetAtTime(w ? n.deep.gain * (0.6 + 0.4 * g.depth) : 0, now, 0.3);
+    }
+    if (st.gWire) {
+      const cut = g.underwater ? 750 - 430 * g.depth : 20000;
+      st.gWire.lp.frequency.setTargetAtTime(cut, now, 0.12);
+      st.gWire.lpRev.frequency.setTargetAtTime(cut, now, 0.12);
+      st.gWire.duck.gain.setTargetAtTime(g.finished ? 0.0001 : (g.chaseOn ? 0.35 : 1) * (g.underwater ? 0.5 : 1), now, 0.2);
+      st.gWire.uw.gain.setTargetAtTime(g.underwater && !g.finished ? 1 : 0, now, 0.45);      // lớp nhạc dưới nước
+      st.gWire.uwVol.gain.setTargetAtTime(st.bgmVol * (g.chaseOn ? 0.35 : 1), now, 0.1);
+    }
+    chaseLayer(g.chaseOn && !g.finished && !st.muted);
+    if (st.muted) return;
+    if (g.chaseOn && !g.finished && now >= (g.nextPulse || 0)) {          // nhịp trầm dồn dập khi bị đuổi
+      const k = (g.pulseIdx = ((g.pulseIdx || 0) + 1) % 4);
+      tone(now + 0.02, { f0: 58, f1: 50, dur: 0.14, gain: k === 0 ? 0.34 : 0.2 });
+      g.nextPulse = now + 0.27;
+    }
+    if (g.underwater && !g.finished && (g.oxy < 0.25 || g.choking) && now >= g.nextHeart) {   // tim đập khi sắp hết oxy
+      heart(now + 0.02, g.choking);
+      g.nextHeart = now + (g.choking ? 0.45 : 0.95 - (0.25 - g.oxy) / 0.25 * 0.4);
+    }
+    if (!g.finished && now >= g.nextAmbEvt) { ambEvent(now + 0.05); g.nextAmbEvt = now + (g.underwater ? 1.1 : 1.6) + Math.random() * 2.2; }
+    if (g.moving && !g.finished && now >= g.nextStroke) {                 // tiếng bơi: sải tay dưới nước / quẫy ở mặt nước
+      if (g.underwater) noiseHit(now + 0.01, { type: "bandpass", f0: 420, f1: 900, q: 0.8, dur: 0.26, gain: 0.07, att: 0.06 });
+      else noiseHit(now + 0.01, { type: "highpass", f0: 1600, dur: 0.12, gain: 0.07 });
+      g.nextStroke = now + (g.underwater ? 0.55 : 0.42);
+    }
+  }
+
+  function setActive(on) {
+    if (on === g.on) return;
+    g.on = on;
+    if (on) {
+      if (!st.unlocked) { g.on = false; return; }   // chưa có thao tác của người dùng: đợi lần sau
+      wire(); startAmb(); g.beat = 0; g.nextT = st.ctx.currentTime + 0.1;
+      if (!g.timer) g.timer = setInterval(tick, 50);
+    } else {
+      if (g.timer) { clearInterval(g.timer); g.timer = null; }
+      if (st.ctx) { stopAmb(); chaseLayer(false); }
+      if (st.gWire && st.ctx) {   // trả đường nhạc về trong trẻo cho quán
+        const t = st.ctx.currentTime;
+        st.gWire.lp.frequency.setTargetAtTime(20000, t, 0.05); st.gWire.lpRev.frequency.setTargetAtTime(20000, t, 0.05);
+        st.gWire.duck.gain.setTargetAtTime(1, t, 0.05);
+        st.gWire.uw.gain.setTargetAtTime(0, t, 0.05);
+      }
+    }
+  }
+  function update(s) {   // s: {underwater, depth 0..1, oxy 0..1, choking, chase, finished, moving}
+    const wasFinished = g.finished;
+    Object.assign(g, { underwater: s.underwater, depth: s.depth, oxy: s.oxy, choking: s.choking, chaseOn: s.chase, finished: s.finished, moving: s.moving });
+    if (wasFinished && !s.finished) { g.beat = 0; if (st.ctx) g.nextT = st.ctx.currentTime + 0.1; g.lowOxyWarned = false; }
+    if (ok() && s.underwater && s.oxy < 0.25 && !g.lowOxyWarned) { g.lowOxyWarned = true; tone(st.ctx.currentTime + 0.01, { f0: 1320, dur: 0.12, gain: 0.12, type: "triangle" }); }
+    if (s.oxy > 0.5) g.lowOxyWarned = false;
+  }
+
+  // ---- hiệu ứng theo sự kiện của sim ----
+  function sfx(name, d, pan) {
+    if (!ok()) return;
+    d = d || {}; pan = pan || 0;
+    const t = st.ctx.currentTime + 0.01, kn = (k) => nhz(KIND_NOTE[k] || "G5");
+    switch (name) {
+      case "dive":
+        noiseHit(t, { type: "lowpass", f0: 3200, f1: 380, dur: 0.38, gain: 0.34, pan });
+        tone(t + 0.05, { f0: 520, f1: 170, slideDur: 0.16, dur: 0.18, gain: 0.18, pan });
+        break;
+      case "surface":
+        noiseHit(t, { type: "bandpass", f0: 1500, f1: 3600, dur: 0.24, gain: 0.26, pan });
+        noiseHit(t + 0.12, { type: "bandpass", f0: 1100, q: 2.2, dur: 0.32, gain: d.gasp ? 0.22 : 0.09, att: 0.05, pan });   // thở hắt
+        break;
+      case "gather":
+        noiseHit(t, { type: "highpass", f0: 3200, dur: 0.1, gain: 0.16, pan }); noiseHit(t + 0.07, { type: "highpass", f0: 2600, dur: 0.12, gain: 0.12, pan });
+        tone(t + 0.06, { f0: kn(d.kind), dur: 0.3, gain: 0.2, type: "triangle", pan, rev: 0.18 });
+        tone(t + 0.14, { f0: kn(d.kind) * 1.5, dur: 0.36, gain: 0.16, type: "triangle", pan, rev: 0.2 });
+        break;
+      case "catch_swing":
+        noiseHit(t, { type: "bandpass", f0: 600, f1: 1700, dur: 0.16, gain: 0.14, pan });
+        break;
+      case "fish_caught": {
+        noiseHit(t, { type: "bandpass", f0: 800, f1: 2600, dur: 0.2, gain: 0.2, pan });
+        const base = kn(d.kind), steps = d.kind === "ca_loc" ? [1, 1.5, 2] : d.kind === "ca_keo" ? [1, 1.125, 1.5] : [1, 1.25, 1.5, 2];
+        if (d.kind === "ca_loc") E.playPerc(st.ctx, "kick", t + 0.05, 0.5, st.sfx, pan);
+        steps.forEach((m, i) => tone(t + 0.08 + i * 0.07, { f0: base * m / (d.kind === "ca_linh" ? 2 : 1), dur: 0.28, gain: 0.2, type: "triangle", pan, rev: 0.2 }));
+        break;
+      }
+      case "dock_stored":
+        tone(t, { f0: 150, f1: 95, dur: 0.12, gain: 0.3, pan });                                   // giỏ đặt xuống sàn gỗ
+        E.playPerc(st.ctx, "mo", t + 0.03, 0.55, st.sfx, pan);
+        ["D5", "A5"].forEach((n, i) => tone(t + 0.1 + i * 0.08, { f0: nhz(n), dur: 0.26, type: "triangle", gain: 0.18, pan, rev: 0.15 }));
+        break;
+      case "hold_full":
+        E.playPerc(st.ctx, "mo", t, 0.5, st.sfx, pan);
+        tone(t + 0.07, { f0: 230, f1: 190, dur: 0.12, type: "triangle", gain: 0.2, pan });
+        tone(t + 0.21, { f0: 200, f1: 150, dur: 0.15, type: "triangle", gain: 0.18, pan });
+        break;
+      case "oxygen_empty":
+        for (let i = 0; i < 3; i++) { tone(t + i * 0.26, { f0: 940, dur: 0.1, gain: 0.16, type: "square" }); tone(t + i * 0.26 + 0.12, { f0: 700, dur: 0.1, gain: 0.14, type: "square" }); }
+        break;
+      case "choke":
+        for (let i = 0; i < 3; i++) tone(t + i * 0.09, { f0: 320 - i * 40, f1: 120, slideDur: 0.07, dur: 0.08, gain: 0.2 });
+        tone(t + 0.25, { f0: 90, f1: 45, dur: 0.25, gain: 0.36 });
+        break;
+      case "croc_hit":
+        noiseHit(t, { type: "bandpass", f0: 900, q: 0.7, dur: 0.09, gain: 0.5, pan });
+        tone(t, { f0: 140, f1: 48, dur: 0.24, gain: 0.42, pan });
+        tone(t + 0.1, { f0: 420, f1: 240, slideDur: 0.2, dur: 0.22, type: "triangle", gain: 0.2, pan });
+        break;
+      case "chase_start":
+        tone(t, { f0: 98, dur: 0.7, type: "sawtooth", gain: 0.1, pan, att: 0.12 }); tone(t, { f0: 104, dur: 0.7, type: "sawtooth", gain: 0.1, pan, att: 0.12 });
+        E.playPerc(st.ctx, "kick", t, 0.8, st.sfx, pan);
+        break;
+      case "faint":
+        ["G5", "E5", "D5", "B4", "G4"].forEach((n, i) => tone(t + i * 0.22, { f0: nhz(n), dur: i === 4 ? 0.9 : 0.3, type: "triangle", gain: 0.2, rev: 0.25 }));
+        tone(t, { f0: 80, f1: 40, dur: 1.2, gain: 0.25 });
+        break;
+      case "node_regrown":
+        tone(t, { f0: nhz("E6"), dur: 0.18, gain: 0.06, pan, rev: 0.3 }); tone(t + 0.08, { f0: nhz("B6"), dur: 0.26, gain: 0.05, pan, rev: 0.3 });
+        break;
+      case "spoiled":
+        tone(t, { f0: 300, f1: 190, dur: 0.22, type: "triangle", gain: 0.12 }); tone(t, { f0: 312, f1: 198, dur: 0.22, type: "triangle", gain: 0.1 });
+        break;
+      case "end_docked":
+        ["G5", "A5", "B5", "D6", "G6"].forEach((n, i) => tone(t + i * 0.12, { f0: nhz(n), dur: i === 4 ? 1.0 : 0.26, type: "triangle", gain: 0.22, rev: 0.25 }));
+        break;
+      case "end_time":
+        ["D6", "B5", "G5", "D5", "G5"].forEach((n, i) => tone(t + i * 0.16, { f0: nhz(n), dur: i === 4 ? 0.9 : 0.3, type: "triangle", gain: 0.2, rev: 0.25 }));
+        break;
+    }
+  }
+
+  global.GatherAudio = { setActive, update, sfx };
+})(window);
+
 /*
  * Client chơi trực tiếp (starter). CHỈ ĐỌC snapshot từ GET /state và gửi phím qua POST /input.
  * Trường nào snapshot chưa có thì bỏ qua (nhóm viết luật tới đâu, hình hiện tới đó). Hình khối tạm, thay bằng đồ họa của nhóm.
@@ -669,6 +1003,7 @@ async function poll() {
     offline = false;
     trackPlayer();
     handleQuanAudio(snap);
+    if (window.GatherAudio) window.GatherAudio.setActive(snap.mode === "gather" && !snap.error);
   } catch (e) { offline = true; }
   setTimeout(poll, 33);
 }
@@ -1103,10 +1438,12 @@ function countItems(items) {   // {kind: n} hoặc [{id, kind, fresh}] -> {kind:
 addEventListener("keydown", (e) => { if (!e.repeat && e.key.toLowerCase() === "l") showLog = !showLog; });
 // Enter: buổi sáng đã kết thúc (ngất / cập bến / hết giờ) -> chơi lại ngay, khỏi cầm chuột (giống nút "Bắt đầu lại").
 // preventDefault để Enter không "bấm" thêm nút đang được focus -> tránh restart hai lần.
+// Ngày liền mạch (--mode day, có snap.day): server TỰ sang quán ~1.5 s sau buổi sáng -> Enter không chơi lại để khỏi cắt ngang;
+// quán hết ca vì hết giờ -> Enter sang ngày kế (giống nút ▶).
 addEventListener("keydown", (e) => {
-  if (e.key !== "Enter" || e.repeat || !snap || snap.mode !== "gather" || !snap.finished) return;
-  e.preventDefault();
-  postRestart({});
+  if (e.key !== "Enter" || e.repeat || !snap || !snap.finished) return;
+  if (snap.mode === "gather") { if (snap.day !== undefined) return; e.preventDefault(); postRestart({}); }
+  else if (snap.mode === "quan" && snap.day !== undefined && snap.reason === "time") { e.preventDefault(); postRestart({ next: true }); }
 });
 
 // Vẽ ô vuông trong hệ tọa độ sprite (đã translate/scale/rotate); u = cỡ một ô trên màn hình.
@@ -1278,7 +1615,7 @@ function updateCam(p, s, w, vh, x0, x1, y0, y1, t) {
   const ty = clampAx(p && p.pos ? p.pos[1] - 1 : 0, y0, y1, hh);
   if (CAM.x === null || t - CAM.t > 0.5) { CAM.x = tx; CAM.y = ty; }   // lần đầu / tab bị treo: nhảy thẳng tới
   else { const k = 1 - Math.exp(-(t - CAM.t) * 6); CAM.x += (tx - CAM.x) * k; CAM.y += (ty - CAM.y) * k; }
-  CAM.t = t;
+  CAM.t = t; CAM.hw = hw;
   CAM.x = clampAx(CAM.x, x0, x1, hw); CAM.y = clampAx(CAM.y, y0, y1, hh);
   return CAM;
 }
@@ -1328,7 +1665,64 @@ function gatherHudBottom(w, h, bottom) {
     const dc = snap.dock_count || 0, dcap = snap.dock_capacity;
     htext("BẾN " + dc + "/" + dcap, w - 14, y0 + 16, { size: 13, align: "right", color: dc >= dcap ? "#ff9a8a" : GC.gold });
   }
-  htext("WASD bơi · Shift nhanh · E cất/hái · Space bắt · Q kết thúc · L nhật ký", w - 14, y0 + bottom / 2 + 6, { size: 12, align: "right", color: "#e8d3a6" });
+  htext("WASD bơi · Shift nhanh · E cất/hái · Space bắt · Q kết thúc · M âm thanh · L nhật ký", w - 14, y0 + bottom / 2 + 6, { size: 12, align: "right", color: "#e8d3a6" });
+}
+
+// ---------- âm thanh gather: nối sự kiện / trạng thái snapshot với GatherAudio ----------
+const panOfWorldX = (x) => (CAM.x === null ? 0 : Math.max(-0.65, Math.min(0.65, ((x - CAM.x) / (CAM.hw || 20)) * 0.6)));
+const AUD = { prevOxy: 1, prevChase: false };
+function gatherSound(e, p) {
+  const GA = window.GatherAudio, d = e.data || {};
+  if (!GA) return;
+  const px = p && p.pos ? p.pos[0] : 0;
+  switch (e.name) {
+    case "dive": case "surface": GA.sfx(e.name, { gasp: AUD.prevOxy < 0.4 }, panOfWorldX(d.pos ? d.pos[0] : px)); break;
+    case "gather": case "fish_caught": case "hold_full": case "croc_hit": case "spoiled": case "dock_stored": GA.sfx(e.name, d, panOfWorldX(px)); break;
+    case "dock_full": GA.sfx("hold_full", d, panOfWorldX(px)); break;
+    case "oxygen_empty": case "choke": case "faint": GA.sfx(e.name, d, 0); break;
+    case "node_regrown": {
+      const n = (snap.nodes || []).find((q) => q.id === d.node_id);
+      if (n && Math.abs(n.pos[0] - (CAM.x || 0)) <= (CAM.hw || 20) * 1.3) GA.sfx("node_regrown", d, panOfWorldX(n.pos[0]));
+      break;
+    }
+    case "gather_end": if (d.reason === "docked" || d.reason === "time") GA.sfx("end_" + d.reason, d, 0); break;
+  }
+}
+function gatherAudioState(p, meta) {   // trạng thái liên tục: dưới nước, độ sâu, oxy, ngạt, cá sấu đuổi, đang bơi
+  const GA = window.GatherAudio;
+  if (!GA || !p || !p.pos) return;
+  const D = ((meta.bounds || {}).d || [0, 30])[1] || 30, oxy = p.oxygen_max_ticks ? p.oxygen_ticks / p.oxygen_max_ticks : 1;
+  const chase = (snap.crocs || []).some((c) => c.state === "chase"), v = p.vel || [0, 0];
+  if (chase && !AUD.prevChase && !snap.finished) {
+    const c = snap.crocs.find((q) => q.state === "chase");
+    GA.sfx("chase_start", {}, panOfWorldX(c.pos[0]));
+  }
+  AUD.prevChase = chase;
+  GA.update({ underwater: !p.at_surface, depth: Math.max(0, Math.min(1, p.pos[1] / D)), oxy, choking: oxy <= 0 && !p.at_surface,
+    chase, finished: !!snap.finished, moving: Math.hypot(v[0], v[1]) > 0.5 });
+  AUD.prevOxy = oxy;
+}
+// Space dưới nước khi hết hồi chiêu: tiếng vợt vút (nếu trúng cá, tiếng "bắt được" theo ngay sau từ sự kiện)
+addEventListener("keydown", (e) => {
+  if (e.repeat || e.key !== " " || !snap || snap.mode !== "gather" || snap.finished) return;
+  const p = snap.player;
+  if (p && !p.at_surface && !(p.catch_cd_ticks > 0) && window.GatherAudio) window.GatherAudio.sfx("catch_swing", {}, 0);
+});
+// Icon loa trên HUD gather (menubar bị ẩn ở buổi sáng): chuột trái = tắt/bật, chuột phải = bảng âm lượng
+const SPK = { x: -1, y: 0, w: 34, h: 30 };
+const inSpk = (e) => snap && snap.mode === "gather" && SPK.x >= 0 && e.offsetX >= SPK.x && e.offsetX <= SPK.x + SPK.w && e.offsetY >= SPK.y && e.offsetY <= SPK.y + SPK.h;
+cv.addEventListener("click", (e) => { if (inSpk(e) && window.QuanAudio) { const m = window.QuanAudio.toggleMute(); if (!m) playUiClick(); } });
+cv.addEventListener("contextmenu", (e) => { if (inSpk(e)) { e.preventDefault(); document.getElementById("btnAudioCfg").click(); } });
+cv.addEventListener("mousemove", (e) => { if (inSpk(e)) cv.style.cursor = "pointer"; });
+function speakerPx(x, y, muted, unlocked) {
+  SPK.x = x; SPK.y = y;
+  ctx.fillStyle = GC.rim2; ctx.fillRect(x, y, SPK.w, SPK.h);
+  ctx.fillStyle = muted ? "#5a3a2a" : "#2c4152"; ctx.fillRect(x + 2, y + 2, SPK.w - 4, SPK.h - 4);
+  const c = muted ? "#b98a6a" : "#ffe9b0", u = 3, ox = x + 6, oy = y + 6;
+  ctx.fillStyle = c;
+  ctx.fillRect(ox, oy + 2 * u, 2 * u, 2 * u); ctx.fillRect(ox + 2 * u, oy + u, u, 4 * u); ctx.fillRect(ox + 3 * u, oy, u, 6 * u);
+  if (muted) { for (let i = 0; i < 4; i++) { ctx.fillRect(ox + 5 * u + i * u, oy + u + i * u, u, u); ctx.fillRect(ox + 8 * u - i * u, oy + u + i * u, u, u); } }
+  else { ctx.fillRect(ox + 5 * u, oy + 2 * u, u, 2 * u); if (unlocked) { ctx.fillRect(ox + 6.5 * u, oy + u, u, 4 * u); } }
 }
 
 // ---------- phản hồi sự kiện: chữ nổi, bọt nước, nháy đỏ ----------
@@ -1339,6 +1733,8 @@ function fxOf(e, p) {
     case "gather": return { text: "+" + d.amount + " " + name(d.kind), color: "#fff3b0", at };
     case "fish_caught": return { text: "+" + d.yield + " " + name(d.kind), color: "#c8f7ff", at };
     case "spoiled": return { text: name(d.kind) + " bị ươn rồi!", color: "#e0b070", at, small: true };
+    case "dock_stored": return { text: "Cất " + d.stored + " món vào bến (" + d.dock_count + "/" + d.dock_capacity + ")", color: "#ffe9a8", at };
+    case "dock_full": return { text: "Bến đầy rồi! (" + d.dock_count + "/" + d.dock_capacity + ")", color: "#ffb4a8", at };
     case "hold_full": return { text: "Giỏ đầy! (cần " + d.required + ", còn " + d.free + ")", color: "#ffb4a8", at };
     case "dock_stored": return { text: "Cất +" + d.stored + " vào bến (" + d.dock_count + "/" + d.dock_capacity + ")", color: GC.gold, at };
     case "dock_full": return { text: "Kho bến đầy! (" + d.dock_count + "/" + d.dock_capacity + ")", color: "#ffb4a8", at };
@@ -1364,6 +1760,7 @@ function updateFx(p, t) {
     if ((e.name === "dive" || e.name === "surface") && e.data && e.data.pos) FX.splashes.push({ at: e.data.pos.slice(), t0: t });
     const f = fxOf(e, p);
     if (f) { FX.items.push(Object.assign(f, { t0: t })); if (f.flash) FX.flash = t; }
+    if (e.tick >= tick - 30) gatherSound(e, p);
   }
   if (FX.seen.size > 400) FX.seen = new Set([...FX.seen].slice(-200));
   FX.items = FX.items.filter((f) => t - f.t0 < 1.8);
@@ -1431,8 +1828,12 @@ function gatherEndPanel(w, h) {                    // bảng kết thúc buổi 
     });
   }
   const blink = Math.floor(performance.now() / 500) % 2 ? GC.gold : GC.paper;
-  htext("Nhấn ENTER để chơi lại", w / 2, y0 + ph - 30, { size: 16, align: "center", color: blink });
-  if (snap.day !== undefined && snap.reason === "time") htext("hoặc bấm \"Ngày tiếp theo\" trên menu", w / 2, y0 + ph - 12, { size: 11, align: "center", color: "#e0c58f" });
+  if (snap.day !== undefined) {   // --mode day: server tự chèo về quán sau ~1.5 s
+    const dots = ".".repeat(1 + (Math.floor(performance.now() / 400) % 3));
+    htext("Đang chèo xuồng về quán" + dots, w / 2, y0 + ph - 30, { size: 16, align: "center", color: blink });
+  } else {
+    htext("Nhấn ENTER để chơi lại", w / 2, y0 + ph - 30, { size: 16, align: "center", color: blink });
+  }
 }
 
 // ----- cảnh GATHER: nhìn ngang, x sang phải, d xuống -----
@@ -1508,10 +1909,12 @@ function drawGather(w, h) {
     if (hint) hintPill(x, y - 2.4 * s, hint[0], hint[1]);
   }
   updateFx(p, t);
+  gatherAudioState(p, meta);
   drawFx(sx, sy, s, t, w, h);
   ctx.restore();
   gatherHudTop(w, p, t);
   if (w >= 1100) gatherMinimap(w - 252, 11, 232, 34, meta, cam, s, w, vh, t);
+  if (window.QuanAudio) { const as = window.QuanAudio.getState(); speakerPx(w >= 1100 ? w - 420 : w - 50, 13, as.muted, as.unlocked); }
   gatherHudBottom(w, h, bottom);
   if (snap.finished) gatherEndPanel(w, h);
 }
@@ -2421,7 +2824,7 @@ function hudText() {
       ctx.fillStyle = "rgba(10,20,26,.7)"; ctx.fillRect(0, (cy0 - 30) * SC, LW * SC, 60 * SC);
       ptext("KẾT CA" + (snap.day !== undefined ? " · NGÀY " + snap.day : ""), LW / 2, cy0 - 20, { size: 14, color: "#ffd23f" });
       ptext((snap.money ?? 0) + "k · uy tín " + (snap.reputation ?? 0).toFixed(1) + " · điểm " + (snap.score ?? 0), LW / 2, cy0 - 2, { size: 7, color: "#fff2cf" });
-      ptext(snap.day !== undefined && snap.reason === "time" ? "Bấm nút ▶ để sang ngày kế tiếp" : "Bấm nút ↻ để chơi lại", LW / 2, cy0 + 10, { size: 6, color: "#e0c58f" });
+      ptext(snap.day !== undefined && snap.reason === "time" ? "ENTER hoặc nút ▶ để sang ngày kế tiếp" : "Bấm nút ↻ để chơi lại", LW / 2, cy0 + 10, { size: 6, color: "#e0c58f" });
     }
   });
 }
