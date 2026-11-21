@@ -1,23 +1,8 @@
-"""Buổi sáng — Lặn & Hái (`gather`). KHUNG: bơi, chặn mép, đồng hồ, cập bến, xuất kho.
+"""Buổi sáng — Lặn & Hái (`gather`) Phase 2.
 
 Mặt cắt dòng sông nhìn NGANG: vị trí `[x, d]` (x sang phải, `d` độ sâu hướng xuống, d = 0 là mặt nước).
-`move = [x, d]`: thành phần thứ hai DƯƠNG = bơi xuống. Hướng mặt là góc từ +x, dương = xuống.
-
-Đã làm sẵn để smoke test chạy được: bơi + tăng/giảm tốc, chặn mép (d không âm), đồng hồ và hết giờ,
-cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`), xuất kho, snapshot đầy đủ trường gather.
-
-Nhóm viết tiếp (đúng thứ tự một bước trong PRD mục 13.8, "Gather"):
-  TODO(nhóm, lát 1): bơi + oxy + biên + giỏ
-      - oxy: dưới nước (d > surface_depth) trừ 1 tick/tick, mặt nước hồi oxygen_refill_per_tick, kẹp [0, max]
-      - ngạt: oxy = 0 và đang dưới nước -> đếm zero_oxy_ticks, đủ choke_interval_ticks thì -1 Máu (choke)
-      - Máu về 0 -> ngất (faint, gather_end reason `fainted`, mất toàn bộ giỏ, kho rỗng)
-      - sự kiện dive / surface / oxygen_empty / choke / faint
-      - giỏ: thứ tự nhặt (LIFO), sức chứa hold_capacity
-  TODO(nhóm, lát 2): hái + bắt cá + cập bến + kho
-      - hái nút ở mặt nước (gather, hold_full), nút mọc lại (node_regrown đã có phần đếm ngược)
-      - bắt đàn cá bằng `catch` (fish_caught, hold_full, hồi chiêu catch_cd_ticks, chỉ khi dưới nước)
-      - cập bến xét TRƯỚC hái (đã có); ghi kho đúng một lần do runner lo
-Các tính năng của phase sau chưa nằm trong khung này.
+Bao gồm: bơi, oxy, ngạt, Máu, giỏ LIFO, hái nút (gồm kèo nèo), bắt cá, đàn cá bơi + sinh thêm,
+Cá Sấu Năm Chèo (patrol / chase / hit / recoil), cập bến và xuất kho.
 """
 
 import math
@@ -30,6 +15,17 @@ TICK = 60.0
 AXES = ("x", "d")
 
 
+def _reflect(val, vel, lo, hi):
+    while val < lo or val > hi:
+        if val < lo:
+            val = 2.0 * lo - val
+            vel = -vel
+        elif val > hi:
+            val = 2.0 * hi - val
+            vel = -vel
+    return val, vel
+
+
 class GatherSim:
     mode = "gather"
     phase = "gather"
@@ -39,6 +35,8 @@ class GatherSim:
         self.t = t
         self.rng = streams
         self.ids = ids
+        self.day = scenario.get("day", 1)
+        self.phase_tick = 0
         p = scenario.get("player", {})
         self.pos = [float(c) for c in p.get("pos", t["start_pos"])]
         self.vel = [float(c) for c in p.get("vel", [0.0, 0.0])]
@@ -53,22 +51,68 @@ class GatherSim:
         self.catch_cd_ticks = p.get("catch_cd_ticks", 0)
         self.hold = list(scenario.get("hold", []))  # thứ tự nhặt, cuối mảng là mới nhất
         self.time_left_ticks = scenario.get("time_left_ticks", int(round(t["duration_s"] * TICK)))
-        # nút và đàn cá: scenario THAY THẾ danh sách mặc định; random_fish=false tắt cá mặc định
+
         src_nodes = scenario["nodes"] if "nodes" in scenario else t["nodes"]
         self.nodes = [{"id": n["id"], "kind": n["kind"], "pos": [float(c) for c in n["pos"]],
                        "regrow_ticks": n.get("regrow_ticks", 0)} for n in src_nodes]
+        for n in self.nodes:
+            ids.reserve(n["id"])
+
+        self.random_fish = scenario.get("random_fish", True)
+        self.fish = []
         if "fish" in scenario:
-            src_fish = scenario["fish"]
-        elif scenario.get("random_fish", True):
-            src_fish = t["fish_initial"]
+            for f in scenario["fish"]:
+                ids.reserve(f["id"])
+                self.fish.append({
+                    "id": f["id"], "kind": f["kind"],
+                    "pos": [float(c) for c in f["pos"]],
+                    "heading_deg": float(f.get("heading_deg", 0)),
+                    "swim_ticks": int(f.get("swim_ticks", 0)),
+                })
+        elif self.random_fish:
+            if t.get("fish_initial"):
+                for f in t["fish_initial"]:
+                    ids.reserve(f["id"])
+                    self.fish.append({
+                        "id": f["id"], "kind": f["kind"],
+                        "pos": [float(c) for c in f["pos"]],
+                        "heading_deg": float(f.get("heading_deg", 0)),
+                        "swim_ticks": 0,
+                    })
+            else:
+                self._spawn_initial_fish()
+
+        self.crocs = []
+        if "crocs" in scenario:
+            for c in scenario["crocs"]:
+                ids.reserve(c["id"])
+                wps = [[float(w[0]), float(w[1])] for w in c.get("waypoints", [[60, 24], [64, 24]])]
+                pos = [float(x) for x in c.get("pos", wps[0])]
+                wp_idx = c.get("wp_index", 1 if len(wps) > 1 and pos == wps[0] else 0)
+                self.crocs.append({
+                    "id": c["id"],
+                    "pos": pos,
+                    "waypoints": wps,
+                    "wp_index": wp_idx,
+                    "state": c.get("state", "patrol"),
+                    "recoil_ticks": int(c.get("recoil_ticks", 0)),
+                    "recoil_dir": [float(x) for x in c.get("recoil_dir", [1.0, 0.0])],
+                })
         else:
-            src_fish = []
-        # Đàn cá đứng yên ở phase này. Cá bơi / sinh thêm là việc của phase sau.
-        self.fish = [{"id": f["id"], "kind": f["kind"], "pos": [float(c) for c in f["pos"]],
-                      "heading_deg": f.get("heading_deg", 0)} for f in src_fish]
-        for coll in (self.nodes, self.fish):
-            for e in coll:
-                ids.reserve(e["id"])
+            for c in t.get("crocs_initial", []):
+                if c.get("min_day", 1) <= self.day:
+                    ids.reserve(c["id"])
+                    wps = [[float(w[0]), float(w[1])] for w in c["waypoints"]]
+                    self.crocs.append({
+                        "id": c["id"],
+                        "pos": list(wps[0]),
+                        "waypoints": wps,
+                        "wp_index": 1 if len(wps) > 1 else 0,
+                        "state": "patrol",
+                        "recoil_ticks": 0,
+                        "recoil_dir": [1.0, 0.0],
+                    })
+
         self.money = 0
         self.earned = 0
         self.reputation = tuning["quan"]["reputation_initial"]
@@ -93,12 +137,15 @@ class GatherSim:
                       for n in sort_by_id(self.nodes)],
             "fish": [{"id": f["id"], "pos": f["pos"], "kind": f["kind"], "heading_deg": f["heading_deg"]}
                      for f in sort_by_id(self.fish)],
+            "crocs": [{"id": c["id"], "pos": c["pos"], "state": c["state"], "recoil_ticks": c["recoil_ticks"]}
+                      for c in sort_by_id(self.crocs)],
         }
 
     # --- một bước ---------------------------------------------------------------
     def step(self, inp):
         events = []
         # 1. đồng hồ và hàng có sẵn: giảm bộ đếm, nút mọc lại
+        self.phase_tick += 1
         self.time_left_ticks = max(0, self.time_left_ticks - 1)
         self.invuln_ticks = max(0, self.invuln_ticks - 1)
         self.catch_cd_ticks = max(0, self.catch_cd_ticks - 1)
@@ -107,7 +154,7 @@ class GatherSim:
                 n["regrow_ticks"] -= 1
                 if n["regrow_ticks"] == 0:
                     events.append(("node_regrown", {"node_id": n["id"]}))
-        # 2. bơi + chặn mép
+        # 2. bơi + chặn mép + vùng + oxy + ngạt
         was_at_surface = self._at_surface()
         self._move(inp)
         now_at_surface = self._at_surface()
@@ -135,6 +182,18 @@ class GatherSim:
                         events.append(("faint", {"cause": "choke", "lost": lost, "hp": 0}))
                         self._finish("fainted", events)
                         return events
+
+        # 2b. đàn cá bơi và sinh cá
+        self._step_fish()
+        spawn_interval = int(self.t.get("fish_spawn_interval_ticks", 360))
+        if self.random_fish and self.phase_tick > 0 and self.phase_tick % spawn_interval == 0:
+            if len(self.fish) < int(self.t.get("fish_max_count", 12)):
+                self._spawn_periodic_fish()
+
+        # 2c. Cá Sấu Năm Chèo di chuyển và kiểm tra chạm
+        if self._step_crocs_and_hits(events):
+            return events
+
         # 3. interact: bến trước, rồi hái
         if inp.pressed("interact"):
             if self._in_dock():
@@ -171,6 +230,168 @@ class GatherSim:
         if self.time_left_ticks <= 0:
             self._finish("time", events)
         return events
+
+    # --- cá & cá sấu ------------------------------------------------------------
+    def _spawn_points_by_kind(self):
+        xs = self.t.get("fish_spawn_x", [15, 30, 45, 60, 75, 90])
+        ds_map = self.t.get("fish_spawn_d", {"ca_linh": [5, 10], "ca_loc": [10, 16], "ca_keo": [24, 27]})
+        return {k: [[float(x), float(d)] for x in xs for d in ds] for k, ds in ds_map.items()}
+
+    def _pick_weighted_kind(self, valid_by_kind, rng):
+        weights_cfg = self.t.get("fish_spawn_weights", {"ca_linh": 0.4, "ca_loc": 0.3, "ca_keo": 0.3})
+        kinds = [k for k in sorted(valid_by_kind) if valid_by_kind[k]]
+        if not kinds:
+            return None
+        weights = [float(weights_cfg.get(k, 1.0)) for k in kinds]
+        return rng.choices(kinds, weights=weights, k=1)[0]
+
+    def _spawn_initial_fish(self):
+        rng = self.rng.get("fish_spawn")
+        count = int(self.t.get("fish_initial_count", 8))
+        by_kind = self._spawn_points_by_kind()
+        used_geom = set()
+        for _ in range(count):
+            valid = {k: [pt for pt in pts if tuple(pt) not in used_geom] for k, pts in by_kind.items()}
+            kind = self._pick_weighted_kind(valid, rng)
+            if kind is None:
+                break
+            pt = rng.choice(valid[kind])
+            used_geom.add(tuple(pt))
+            heading = rng.uniform(0.0, 360.0)
+            self.fish.append({
+                "id": self.ids.new("F"),
+                "kind": kind,
+                "pos": list(pt),
+                "heading_deg": heading,
+                "swim_ticks": 0,
+            })
+
+    def _spawn_periodic_fish(self):
+        rng = self.rng.get("fish_spawn")
+        min_dist = float(self.t.get("fish_spawn_min_dist", 1.0))
+        by_kind = self._spawn_points_by_kind()
+        valid = {
+            k: [pt for pt in pts if all(math.dist(pt, f["pos"]) > min_dist for f in self.fish)]
+            for k, pts in by_kind.items()
+        }
+        kind = self._pick_weighted_kind(valid, rng)
+        if kind is None:
+            return
+        pt = rng.choice(valid[kind])
+        heading = rng.uniform(0.0, 360.0)
+        self.fish.append({
+            "id": self.ids.new("F"),
+            "kind": kind,
+            "pos": list(pt),
+            "heading_deg": heading,
+            "swim_ticks": 0,
+        })
+
+    def _step_fish(self):
+        speed = float(self.t.get("fish_speed", 1.5))
+        x_lo, x_hi = [float(v) for v in self.t.get("fish_bounds_x", [4, 96])]
+        d_bounds = self.t.get("fish_depth_bounds", {"ca_linh": [3, 12], "ca_loc": [8, 20], "ca_keo": [22, 28]})
+        turn_interval = int(self.t.get("fish_turn_interval_ticks", 120))
+        rng = self.rng.get("fish_swim")
+        for f in sort_by_id(self.fish):
+            f["swim_ticks"] += 1
+            if turn_interval > 0 and f["swim_ticks"] % turn_interval == 0:
+                f["heading_deg"] = rng.uniform(0.0, 360.0)
+            rad = math.radians(f["heading_deg"])
+            vx = speed * math.cos(rad)
+            vd = speed * math.sin(rad)
+            d_lo, d_hi = [float(v) for v in d_bounds[f["kind"]]]
+            nx, vx = _reflect(f["pos"][0] + vx / TICK, vx, x_lo, x_hi)
+            nd, vd = _reflect(f["pos"][1] + vd / TICK, vd, d_lo, d_hi)
+            f["pos"] = [nx, nd]
+            f["heading_deg"] = math.degrees(math.atan2(vd, vx)) % 360
+
+    def _clamp_croc(self, pos):
+        bx_lo, bx_hi = [float(v) for v in self.t["bounds"]["x"]]
+        cd_lo, cd_hi = [float(v) for v in self.t.get("croc_depth_bounds", [10, 30])]
+        pos[0] = min(bx_hi, max(bx_lo, pos[0]))
+        pos[1] = min(cd_hi, max(cd_lo, pos[1]))
+
+    def _step_crocs_and_hits(self, events) -> bool:
+        if not self.crocs:
+            return False
+        cd_lo = float(self.t.get("croc_depth_bounds", [10, 30])[0])
+        patrol_speed = float(self.t.get("croc_patrol_speed", 1.0))
+        chase_speed = float(self.t.get("croc_chase_speed", 3.0))
+        detect_r = float(self.t.get("croc_detect_radius", 10.0))
+        lose_r = float(self.t.get("croc_lose_radius", 16.0))
+        hit_r = float(self.t.get("croc_hit_radius", 1.5))
+        recoil_speed = float(self.t.get("croc_recoil_speed", 2.0))
+        invuln_dur = int(self.t.get("croc_invuln_ticks", 90))
+        recoil_dur = int(self.t.get("croc_recoil_ticks", 60))
+
+        player_deep = self.pos[1] >= cd_lo
+        active_for_hit = []
+
+        for c in sort_by_id(self.crocs):
+            if c["state"] == "recoil":
+                step_d = recoil_speed / TICK
+                c["pos"][0] += c["recoil_dir"][0] * step_d
+                c["pos"][1] += c["recoil_dir"][1] * step_d
+                self._clamp_croc(c["pos"])
+                c["recoil_ticks"] -= 1
+                if c["recoil_ticks"] <= 0:
+                    c["recoil_ticks"] = 0
+                    c["state"] = "patrol"
+                continue
+
+            dist_p = math.dist(c["pos"], self.pos)
+            if c["state"] == "patrol":
+                if player_deep and dist_p <= detect_r:
+                    c["state"] = "chase"
+            elif c["state"] == "chase":
+                if not player_deep or dist_p > lose_r:
+                    c["state"] = "patrol"
+
+            if c["state"] == "chase":
+                if dist_p > 0:
+                    step_d = min(chase_speed / TICK, dist_p)
+                    c["pos"][0] += ((self.pos[0] - c["pos"][0]) / dist_p) * step_d
+                    c["pos"][1] += ((self.pos[1] - c["pos"][1]) / dist_p) * step_d
+            else:
+                wp = c["waypoints"][c["wp_index"]]
+                d_wp = math.dist(c["pos"], wp)
+                step_d = patrol_speed / TICK
+                if d_wp <= step_d:
+                    c["pos"] = [float(wp[0]), float(wp[1])]
+                    if len(c["waypoints"]) > 1:
+                        c["wp_index"] = (c["wp_index"] + 1) % len(c["waypoints"])
+                else:
+                    c["pos"][0] += ((wp[0] - c["pos"][0]) / d_wp) * step_d
+                    c["pos"][1] += ((wp[1] - c["pos"][1]) / d_wp) * step_d
+
+            self._clamp_croc(c["pos"])
+            active_for_hit.append(c)
+
+        if player_deep and self.invuln_ticks == 0:
+            hitter = self._nearest_in_range(active_for_hit, hit_r)
+            if hitter is not None:
+                self.hp = max(0, self.hp - 1)
+                drop_n = len(self.hold) // 2
+                lost = [self.hold.pop() for _ in range(drop_n)]
+                self.invuln_ticks = invuln_dur
+                dx = hitter["pos"][0] - self.pos[0]
+                dd = hitter["pos"][1] - self.pos[1]
+                norm = math.hypot(dx, dd)
+                rx, rd = (1.0, 0.0) if norm == 0 else (dx / norm, dd / norm)
+                hitter["state"] = "recoil"
+                hitter["recoil_ticks"] = recoil_dur
+                hitter["recoil_dir"] = [rx, rd]
+                events.append(("croc_hit", {
+                    "croc_id": hitter["id"], "hp": self.hp, "lost": lost, "invuln_ticks": self.invuln_ticks,
+                }))
+                if self.hp == 0:
+                    lost_all = lost + list(reversed(self.hold))
+                    self.hold.clear()
+                    events.append(("faint", {"cause": "croc", "lost": lost_all, "hp": 0}))
+                    self._finish("fainted", events)
+                    return True
+        return False
 
     # --- tiện ích ---------------------------------------------------------------
     def _at_surface(self) -> bool:
