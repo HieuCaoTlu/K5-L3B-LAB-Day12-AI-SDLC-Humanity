@@ -114,7 +114,7 @@ class LiveGame:
             self.session.sim.debug_full_stock = True
         self._after = 0
         self._ver += 1
-        self.inputs = LiveInputs(buttons=("interact", "catch", "sprint"))
+        self.inputs = LiveInputs(buttons=("interact", "catch", "sprint", "end_gather"))
         self.events = []
         self._saved = False
         self.error = None
@@ -199,7 +199,7 @@ class LiveGame:
             if not ok:
                 raise ValueError("move phải là [a, b] trong [-1, 1]")
         buttons = {}
-        for b in ("interact", "catch", "sprint"):
+        for b in ("interact", "catch", "sprint", "end_gather"):
             if b in body:
                 if not isinstance(body[b], bool):
                     raise ValueError(f"{b} phải là boolean")

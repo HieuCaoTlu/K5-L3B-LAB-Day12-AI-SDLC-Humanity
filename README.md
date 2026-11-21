@@ -29,8 +29,9 @@ Ngoài phần đề yêu cầu, nhóm được **thêm** nhân vật, loài cá/
 
 ### Sáng tạo của nhóm
 - **Bơi nhanh (`Shift`) ở buổi sáng (`gather`)**: Khi giữ phím `Shift` trong chế độ chơi trực tiếp (`python3 -m chonoi.live --mode gather`), Út Sen tăng tốc độ bơi gấp **1.5×** (`swim_speed * 1.5`) nhưng tiêu hao oxy nhanh gấp **2×** (`2` tick/tick khi dưới nước).
-- **Bảo đảm đúng Test Contract**: Tính năng chỉ bật khi `creative=True` ở `chonoi.live`; ở chế độ `headless` (`creative=False`) nút `sprint` bị vô hiệu hóa hoàn toàn và `BUTTONS_V10` của `chonoi/inputs.py` vẫn giữ nguyên (`interact`, `catch`).
-- **Bằng chứng lõi vẫn đúng**: `GatherCreativeSprintTest` trong `tests/test_gather.py` cùng bộ test smoke/unit/live/team-check (`python -m unittest tests.test_gather tests.test_smoke_p1 tests.test_python_starter_units tests.test_live tests.test_team_check -v`) đạt **58/58 PASS**.
+- **Cất nguyên liệu ở bến (`E`) & tổng kết phiên (`Q`)**: Trong chế độ chơi trực tiếp (`creative=True`), bấm `E` tại bến sẽ cất nguyên liệu từ giỏ vào kho bến (tối đa **20 ô**, chưa kể 12 ô đang giữ trên người) để tiếp tục lặn; bấm `Q` để tổng kết phiên bắt và gộp toàn bộ kho bến + giỏ mang về quán.
+- **Bảo đảm đúng Test Contract**: Cả hai tính năng chỉ bật khi `creative=True` ở `chonoi.live`; ở chế độ `headless` (`creative=False`), nút `sprint`/`end_gather` bị vô hiệu hóa hoàn toàn và `E` tại bến vẫn kết thúc ngay `docked` theo đúng Contract v1.2.
+- **Bằng chứng lõi vẫn đúng**: `GatherCreativeSprintTest` và `GatherCreativeDockStorageTest` trong `tests/test_gather.py` cùng bộ test smoke/unit/live/team-check chạy PASS.
 
 ## Lịch 3 giờ
 
