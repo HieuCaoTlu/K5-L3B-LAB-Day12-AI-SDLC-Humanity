@@ -13,9 +13,34 @@
   #menubar button { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
   #menubar button:hover:not(:disabled) { background: #3b566b; }
   #menubar button:disabled { opacity: .4; cursor: not-allowed; }
-  #rules { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); width: min(560px, 92vw); max-height: calc(100vh - 80px); overflow: auto;
-    background: #fff8e1; color: #4e342e; border: 3px solid #8d6e63; border-radius: 16px; padding: 14px 18px; z-index: 9; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
-  #rules h3 { margin: 0 0 8px; } #rules ul { margin: 4px 0 8px; padding-left: 20px; } #rules li { margin: 3px 0; }
+  /* ===== khung gỗ pixel dùng chung: luật chơi, nâng cấp, ông Hai ===== */
+  .pxm { background: #6b4423; color: #fff3c4; font: bold 18px/1.45 "Courier New", monospace; padding: 20px 22px; box-sizing: border-box;
+    border: 4px solid #241410; border-radius: 0; box-shadow: inset 0 0 0 4px #c9a36b, inset 0 0 0 7px #8a5a2e, 0 8px 0 rgba(0,0,0,.45); max-height: calc(100vh - 70px); overflow: auto; }
+  .pxm .pxh { display: flex; align-items: center; gap: 10px; font-size: 24px; letter-spacing: 1px; color: #ffe27a; text-shadow: 2px 2px 0 #241410;
+    margin: 0 0 14px; padding-bottom: 10px; border-bottom: 4px dashed #c9a36b; }
+  .pxm .pxs { font-size: 16px; font-weight: normal; color: #f1dfb0; margin: 4px 0 8px; }
+  .pxm b { color: #ffd54f; }
+  .pxm ul { list-style: none; margin: 0 0 14px; padding: 0; }
+  .pxm li { position: relative; margin: 8px 0; padding: 10px 12px 10px 38px; background: rgba(36,20,16,.38); border-left: 4px solid #ffd54f; }
+  .pxm li::before { content: ""; position: absolute; left: 13px; top: 17px; width: 10px; height: 10px; background: #ffd54f; box-shadow: 2px 2px 0 #241410; }
+  .pxm .pxrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; padding: 10px 12px; background: rgba(36,20,16,.42); border: 3px solid #241410; }
+  .pxm .pxrow small { font-size: 14px; font-weight: normal; color: #d9c08a; }
+  .pxm .pxcard { margin: 10px 0; padding: 12px 14px; background: #fff3c4; color: #4a2b14; border: 4px solid #241410; box-shadow: 0 4px 0 rgba(0,0,0,.4); }
+  .pxm .pxcard b { color: #4a2b14; font-size: 19px; }
+  .pxm .pxcard .pxs { color: #6a4a2a; font-size: 16px; margin: 6px 0 10px; }
+  .pxm .pips { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: middle; }
+  .pxm .pip { width: 14px; height: 14px; background: #d6c08e; border: 2px solid #241410; box-sizing: border-box; }
+  .pxm .pip.on { background: #4caf50; box-shadow: inset 2px 2px 0 #9be39e; }
+  .pxb { font: bold 18px "Courier New", monospace; color: #3a1f0a; background: #ffd54f; border: 3px solid #241410; border-radius: 0; padding: 9px 16px;
+    box-shadow: inset -3px -3px 0 #c79a1d, inset 3px 3px 0 #fff0a8, 0 4px 0 #241410; cursor: pointer; }
+  .pxb:hover:not(:disabled) { background: #ffe27a; transform: translateY(-1px); }
+  .pxb:active:not(:disabled) { transform: translateY(3px); box-shadow: inset -3px -3px 0 #c79a1d, inset 3px 3px 0 #fff0a8; }
+  .pxb:disabled { background: #a39478; color: #6b5d44; box-shadow: inset 3px 3px 0 #bdb093, 0 4px 0 #241410; cursor: not-allowed; }
+  .pxb.sm { padding: 7px 14px; } .pxb.wide { display: block; width: 100%; margin-top: 12px; }
+  #rules { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); width: min(680px, 94vw); z-index: 9; display: none; }
+  #rules .pxb { display: block; margin: 6px auto 0; min-width: 180px; }
+  #shop { position: fixed; right: 16px; top: 64px; width: min(380px, 94vw); z-index: 7; display: none; }
+  #upgp { position: fixed; left: 16px; top: 64px; width: min(420px, 94vw); z-index: 8; display: none; }
   #audioSpacer { flex: 1; }
   #audioPanel { position: fixed; right: 12px; top: 52px; width: 250px; background: #1d2b36; color: #e8eef2; border: 2px solid #5f7b8f;
     border-radius: 14px; padding: 12px 14px; z-index: 12; display: none; box-shadow: 0 10px 26px rgba(0,0,0,.6); font: 13px system-ui, sans-serif; }
@@ -2325,7 +2350,7 @@ function drawQuan(w, h) {
 
 // ----- cửa hàng ông Hai (DOM, kiểu pixel) -----
 const shopEl = document.createElement("div");
-shopEl.style.cssText = "position:fixed;right:16px;top:120px;width:260px;background:#fff8e1;color:#4e342e;border:3px solid #8d6e63;border-radius:16px;padding:12px;font:14px system-ui;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:5";
+shopEl.id = "shop"; shopEl.className = "pxm";
 document.body.appendChild(shopEl);
 function updateShop() {
   const v = snap && snap.vendor;
@@ -2335,11 +2360,11 @@ function updateShop() {
   shopEl.style.display = "block";
   if (sig === shopSig) return;
   shopSig = sig;
-  let html = `<div class="pxh">${icon("boat", 20)} ${(v.name || "Ông Hai").toUpperCase()}</div><div class="pxs">Bán nguyên liệu, giá cao!</div>` +
-    `<div class="pxrow">${icon("coin", 20)} Bạn có <b>${money}k</b></div>`;
+  let html = `<div class="pxh">${icon("boat", 32)} ${(v.name || "Ông Hai").toUpperCase()}</div><div class="pxs">Bán nguyên liệu, giá cao!</div>` +
+    `<div class="pxrow">${icon("coin", 26)} Bạn có <b>${money}k</b></div>`;
   Object.keys(v.prices).forEach((k) => {
     const i = ING[k] || { k: "", n: k }, pr = v.prices[k], can = money >= pr;
-    html += `<div class="pxrow"><span>${icon(i.k, 22)} ${i.n} <small>(có ${(snap.stock || {})[k] || 0})</small></span>` +
+    html += `<div class="pxrow"><span>${icon(i.k, 30)} ${i.n} <small>(có ${(snap.stock || {})[k] || 0})</small></span>` +
       `<button class="pxb sm" data-k="${k}" ${can ? "" : "disabled"}>${pr}k</button></div>`;
   });
   html += `<button class="pxb wide" data-close="1">Đóng (Esc)</button>`;
@@ -2362,8 +2387,7 @@ addEventListener("keydown", (e) => { if (e.key === "Escape") { shopOpen = false;
 
 // ---------- bảng nâng cấp nhân vật (DOM, kiểu pixel) ----------
 const upgEl = document.createElement("div");
-upgEl.className = "pxm";
-upgEl.style.cssText = "position:fixed;left:16px;top:70px;width:320px;display:none;z-index:6";
+upgEl.id = "upgp"; upgEl.className = "pxm";
 document.body.appendChild(upgEl);
 function updateUpg() {
   const list = snap && snap.upgrades;
@@ -2373,11 +2397,11 @@ function updateUpg() {
   upgEl.style.display = "block";
   if (sig === upgSig) return;
   upgSig = sig;
-  let html = `<div class="pxh">${icon("up", 20)} NÂNG CẤP ÚT SEN</div><div class="pxrow">${icon("coin", 20)} Bạn có <b>${money}k</b></div>`;
+  let html = `<div class="pxh">${icon("up", 32)} NÂNG CẤP ÚT SEN</div><div class="pxrow">${icon("coin", 26)} Bạn có <b>${money}k</b></div>`;
   list.forEach((u) => {
     const maxed = u.next_cost === null, can = !maxed && money >= u.next_cost;
     let pips = ""; for (let i = 0; i < u.max; i++) pips += `<span class="pip${i < u.level ? " on" : ""}"></span>`;
-    html += `<div class="pxcard"><div>${icon(u.icon, 22)} <b>${u.name}</b> <span class="pips">${pips}</span></div><div class="pxs">${u.desc}</div>` +
+    html += `<div class="pxcard"><div>${icon(u.icon, 30)} <b>${u.name}</b> <span class="pips">${pips}</span></div><div class="pxs">${u.desc}</div>` +
       `<button class="pxb sm" data-k="${u.key}" ${can ? "" : "disabled"}>${maxed ? "Tối đa" : "Nâng cấp - " + u.next_cost + "k"}</button></div>`;
   });
   html += `<button class="pxb wide" data-close="1">Đóng (Esc)</button>`;
@@ -2401,14 +2425,14 @@ addEventListener("keydown", (e) => { if (e.key === "Escape") { upgOpen = false; 
 
 // ---------- thanh menu + luật chơi (pixel) ----------
 const RULES = {
-  quan: `<div class="pxh">${icon("book", 22)} LUẬT CHƠI - BUỔI TỐI</div>
+  quan: `<div class="pxh">${icon("book", 32)} LUẬT CHƠI - BUỔI TỐI</div>
 <ul><li>WASD / mũi tên để đi, <b>E</b> để tương tác với bếp hoặc bàn gần nhất.</li>
 <li>Khách gọi món. Đứng gần đúng bếp, bấm <b>E</b> để nấu. Khi báo "Xong!", bấm <b>E</b> lấy món, rồi mang tới bàn khách và bấm <b>E</b>.</li>
 <li>Thiếu nguyên liệu: bấm <b>ông Hai</b> để mua (giá cao). Có tiền: bấm <b>Út Sen</b> để nâng cấp.</li>
 <li>Vòng quanh mặt khách là kiên nhẫn: hết thì khách bỏ đi, −0.5 uy tín. Phục vụ nhanh thì được boa.</li>
 <li>Uy tín thấp thì khách trả ít tiền hơn (về 0 chỉ còn một nửa). Uy tín cao thì trả thêm, tối đa +20%.</li>
 <li>Qua ngày mới khách đông hơn và gọi nhiều món hơn (tối đa 5).</li></ul>`,
-  gather: `<div class="pxh">${icon("book", 22)} LUẬT CHƠI - BUỔI SÁNG</div>
+  gather: `<div class="pxh">${icon("book", 32)} LUẬT CHƠI - BUỔI SÁNG</div>
 <ul><li>WASD / mũi tên để bơi, <b>E</b> hái nút ở mặt nước hoặc cập bến, <b>Space</b> bắt cá dưới nước.</li>
 <li>Hết oxy dưới nước thì mất Máu; hết Máu là ngất và mất giỏ.</li>
 <li>Giỏ chứa tối đa 12 món. Về bến bấm <b>E</b> để kết thúc buổi.</li></ul>`,
