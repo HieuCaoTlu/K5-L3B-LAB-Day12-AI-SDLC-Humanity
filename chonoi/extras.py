@@ -30,15 +30,17 @@ def build_tuning(base: dict, day: int = 1, money: int = START_MONEY) -> dict:
     q["vendor"] = {"pos": [14.6, 8.4], "name": "Ông Hai",
                    "prices": {"ca_loc": 35, "ca_linh": 20, "bong_dien_dien": 25, "bong_sung": 15, "coca": 12}}
     t["menu"]["coca"] = {"recipe": {"coca": 1}, "cook_s": 1, "price": 20}
-    q["customer_interval_s"] = max(6.0, 15.0 - 1.5 * (day - 1))
+    q["first_customer_tick"] = 60  # khách đầu tiên đến sau 1 giây
+    q["customer_interval_s"] = max(4.0, 10.0 - 1.0 * (day - 1))  # ngày 1: 10 s/khách; mỗi ngày dày thêm 1 s, tối thiểu 4 s
     q["max_dishes"] = max_dishes(day)
     q["upgrades"] = {
-        "tasty": {"name": "Nấu ngon hơn", "emoji": "👩‍🍳", "desc": "Khách trả thêm +15% tiền món mỗi cấp", "costs": [80, 140, 220, 320, 450]},
-        "speed": {"name": "Chạy nhanh hơn", "emoji": "👟", "desc": "+15% tốc độ chạy mỗi cấp", "costs": [60, 110, 170, 250]},
-        "carry": {"name": "Khay bưng lớn", "emoji": "🍽", "desc": "Cầm thêm 1 món cùng lúc mỗi cấp", "costs": [120, 220, 350, 500]},
-        "batch": {"name": "Bếp công suất lớn", "emoji": "🔥", "desc": "Mỗi bếp nấu thêm 1 phần cùng lúc mỗi cấp", "costs": [150, 300, 500]},
-        "auto": {"name": "Bếp tự động", "emoji": "🤖", "desc": "Món tự nấu ngay khi có khách gọi, không cần bấm E", "costs": [400]},
+        "tasty": {"name": "Nấu ngon hơn", "icon": "chef", "desc": "Khách trả thêm +15% tiền món mỗi cấp", "costs": [80, 140, 220, 320, 450]},
+        "speed": {"name": "Chạy nhanh hơn", "icon": "shoe", "desc": "+15% tốc độ chạy mỗi cấp", "costs": [60, 110, 170, 250]},
+        "carry": {"name": "Khay bưng lớn", "icon": "tray", "desc": "Cầm thêm 1 món cùng lúc mỗi cấp", "costs": [120, 220, 350, 500]},
+        "batch": {"name": "Bếp công suất lớn", "icon": "flame", "desc": "Mỗi bếp nấu thêm 1 phần cùng lúc mỗi cấp", "costs": [150, 300, 500]},
+        "auto": {"name": "Bếp tự động", "icon": "gear", "desc": "Món tự nấu ngay khi có khách gọi, không cần bấm E", "costs": [400]},
     }
+    q["rep_pay_scale"] = True  # uy tín thấp thì khách trả ít tiền hơn (0 -> 50%, 3.0 -> 100%, 5 -> 120%)
     q["start_money"] = money
     q["day"] = day
     return t
