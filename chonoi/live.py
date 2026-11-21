@@ -1,6 +1,6 @@
 """Cửa sổ chơi trực tiếp bằng TRÌNH DUYỆT, chỉ dùng thư viện chuẩn Python.
 
-    python3 -m chonoi.live --mode gather|quan [--seed N] [--port 8000]
+    python3 -m chonoi.live --mode gather|quan|day [--seed N] [--port 8000]
 
 Máy chủ HTTP nhỏ (ThreadingHTTPServer) phục vụ `chonoi/web/index.html` và hai API:
     GET  /state  -> snapshot JSON hiện tại (cùng trường như dòng snapshot của headless) + `meta` + `events`
@@ -68,8 +68,9 @@ class LiveGame:
     """Một lượt chơi + luồng nền bước 60 tick/s. Mọi truy cập trạng thái đi qua khóa."""
 
     def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None, debug_stock=False,
-                 extras=False, day=1):
+                 extras=False, day=1, start_phase="quan"):
         self.debug_stock = debug_stock
+        self._start_phase = start_phase  # "gather": bắt đầu ngày từ buổi sáng (--mode day); "quan": từ quán
         self.extras = bool(extras) and mode == "quan"  # phần sáng tạo: nhiều ngày, 6 bàn, ông bán hàng... (xem extras.py)
         self.mode = mode
         self.base_tuning = tuning
@@ -91,7 +92,7 @@ class LiveGame:
     def _new_carry(self):
         """Trạng thái đầu ngày (nhiều ngày: tiền, kho, uy tín chuyển sang ngày sau)."""
         self._carry = {"day": self._start_day, "money": START_MONEY, "stock": _clone_stock(self._inventory), "rep": None, "upgrades": {},
-                       "phase": "quan"}   # chu kỳ ngày: bắt đầu ở quán; sang ngày mới thì bắt cá (gather) rồi tự sang quán
+                       "phase": self._start_phase}   # chu kỳ ngày: bắt đầu ở quán (hoặc buổi sáng với --mode day); sang ngày mới thì bắt cá (gather) rồi tự sang quán
 
     def _reset(self):
         if self.extras:
@@ -352,7 +353,8 @@ class LiveServer:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="chonoi.live", description="Chơi trực tiếp trên trình duyệt (starter).")
-    p.add_argument("--mode", required=True, choices=["gather", "quan"])
+    p.add_argument("--mode", required=True, choices=["gather", "quan", "day"],
+                   help="day = một ngày liền mạch: sáng (bắt cá) rồi tự sang tối (quán), qua ngày thì lặp lại")
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--port", type=int, default=8000, help="0 = cổng ngẫu nhiên")
     p.add_argument("--host", default="127.0.0.1")
@@ -365,7 +367,12 @@ def main(argv=None) -> int:
                    help="chỉ với quan: tắt phần sáng tạo (1 bếp, 1 bàn, đúng số liệu contract)")
     p.add_argument("--day", type=int, default=1, help="chỉ với quan sáng tạo: ngày bắt đầu (độ khó tăng theo ngày)")
     a = p.parse_args(argv)
+    day_flow = a.mode == "day"
+    if day_flow:
+        a.mode = "quan"  # kịch bản/kho/luật quán dùng chung; chỉ khác là ngày bắt đầu từ buổi sáng
     try:
+        if day_flow and (a.classic or a.inventory_out or a.scenario):
+            raise BadInput("--mode day cần phần sáng tạo và tự nối sáng/tối: không dùng --classic/--scenario/--inventory-out")
         if a.inventory and a.mode != "quan":
             raise BadInput("--inventory chỉ dùng với quan")
         if a.inventory_out and a.mode != "gather":
@@ -378,7 +385,8 @@ def main(argv=None) -> int:
         if inventory is not None and "stock" in scenario:
             raise BadInput("vừa có quan.stock vừa có --inventory")
         game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, a.debug_stock,
-                        extras=(a.mode == "quan" and not a.classic), day=max(1, a.day))
+                        extras=(a.mode == "quan" and not a.classic), day=max(1, a.day),
+                        start_phase="gather" if day_flow else "quan")
         server = LiveServer(game, a.host, a.port)
     except BadInput as e:
         sys.stderr.write(f"đầu vào sai: {e}\n")
@@ -387,7 +395,7 @@ def main(argv=None) -> int:
         sys.stderr.write(f"không mở được cổng {a.port}: {e}\n")
         return 1
     server.start()
-    print(f"Mở trình duyệt tại {server.url}  (chế độ {a.mode}, seed {a.seed}). Ctrl+C để dừng.", flush=True)
+    print(f"Mở trình duyệt tại {server.url}  (chế độ {'day' if day_flow else a.mode}, seed {a.seed}). Ctrl+C để dừng.", flush=True)
     try:
         while True:
             time.sleep(0.5)
