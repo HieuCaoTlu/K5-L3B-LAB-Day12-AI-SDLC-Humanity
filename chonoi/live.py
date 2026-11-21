@@ -23,6 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .contract import load_contract
 from .errors import BadInput
+from .extras import START_MONEY, build_tuning
 from .inputs import LiveInputs
 from .inventory import read_inventory
 from .runner import Session
@@ -37,18 +38,42 @@ RECENT_EVENTS = 40
 class LiveGame:
     """Một lượt chơi + luồng nền bước 60 tick/s. Mọi truy cập trạng thái đi qua khóa."""
 
-    def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None):
-        self._args = (mode, tuning, scenario, seed, inventory)
+    def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None, debug_stock=False,
+                 extras=False, day=1):
+        self.debug_stock = debug_stock
+        self.extras = bool(extras) and mode == "quan"  # phần sáng tạo: nhiều ngày, 6 bàn, ông bán hàng... (xem extras.py)
         self.mode = mode
+        self.base_tuning = tuning
         self.tuning = tuning
+        self._scenario = scenario
+        self._seed = seed
+        self._inventory = inventory
+        self._start_day = day
         self.inventory_out = inventory_out
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None
+        self._new_carry()
         self._reset()
 
+    def _new_carry(self):
+        """Trạng thái đầu ngày (nhiều ngày: tiền, kho, uy tín chuyển sang ngày sau)."""
+        self._carry = {"day": self._start_day, "money": START_MONEY, "stock": dict(self._inventory or {}), "rep": None, "upgrades": {}}
+
     def _reset(self):
+        if self.extras:
+            c = self._carry
+            self.tuning = build_tuning(self.base_tuning, c["day"], c["money"])
+            scen = dict(self._scenario)
+            if c["rep"] is not None:
+                scen.setdefault("reputation", c["rep"])
+            scen["upgrades"] = dict(c.get("upgrades", {}))
+            self._args = (self.mode, self.tuning, scen, self._seed + c["day"] - 1, dict(c["stock"]))
+        else:
+            self._args = (self.mode, self.tuning, self._scenario, self._seed, self._inventory)
         self.session = Session(*self._args)
+        if self.debug_stock:
+            self.session.sim.debug_full_stock = True
         self.inputs = LiveInputs()
         self.events = []
         self._saved = False
@@ -106,6 +131,8 @@ class LiveGame:
             snap["finished"] = self.session.done
             snap["reason"] = self.session.sim.reason if self.session.done else None
             snap["error"] = self.error
+            if self.extras:
+                snap["day"] = self._carry["day"]
             return json.dumps(snap, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
     def set_input(self, body: dict):
@@ -124,9 +151,37 @@ class LiveGame:
         with self._lock:
             self.inputs.set(move, **buttons)
 
-    def restart(self):
+    def restart(self, new_game=False, next_day=False):
         with self._lock:
+            if self.extras:
+                sim = self.session.sim
+                if new_game:
+                    self._new_carry()
+                elif next_day and self.session.done and sim.reason == "time":  # sang ngày kế tiếp
+                    self._carry = {"day": self._carry["day"] + 1, "money": sim.money,
+                                   "stock": dict(sim.stock), "rep": sim.reputation,
+                                   "upgrades": dict(sim.up)}
             self._reset()
+
+    def upgrade(self, key):
+        """Mua nâng cấp nhân vật (chỉ chế độ quán sáng tạo)."""
+        with self._lock:
+            ev = self.session.sim.upgrade(key) if hasattr(self.session.sim, "upgrade") else None
+            if ev is None:
+                raise ValueError("không nâng cấp được mục này")
+            self.events.append({"type": "event", "tick": self.session.tick, "phase": self.session.sim.phase,
+                                "name": ev[0], "data": ev[1]})
+            del self.events[:-RECENT_EVENTS]
+
+    def buy(self, item):
+        """Mua nguyên liệu từ ông bán hàng (chỉ chế độ quán sáng tạo)."""
+        with self._lock:
+            ev = self.session.sim.buy(item) if hasattr(self.session.sim, "buy") else None
+            if ev is None:
+                raise ValueError("không mua được món này")
+            self.events.append({"type": "event", "tick": self.session.tick, "phase": self.session.sim.phase,
+                                "name": ev[0], "data": ev[1]})
+            del self.events[:-RECENT_EVENTS]
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -173,8 +228,20 @@ class _Handler(BaseHTTPRequestHandler):
                 if not isinstance(body, dict):
                     raise ValueError("body phải là object")
                 self.game.set_input(body)
+            elif path == "/buy":
+                body = json.loads(raw.decode("utf-8") or "{}")
+                if not isinstance(body, dict) or not isinstance(body.get("item"), str):
+                    raise ValueError("body phải có item (chuỗi)")
+                self.game.buy(body["item"])
+            elif path == "/upgrade":
+                body = json.loads(raw.decode("utf-8") or "{}")
+                if not isinstance(body, dict) or not isinstance(body.get("key"), str):
+                    raise ValueError("body phải có key (chuỗi)")
+                self.game.upgrade(body["key"])
             elif path == "/restart":
-                self.game.restart()
+                body = json.loads(raw.decode("utf-8") or "{}") if raw else {}
+                ok = isinstance(body, dict)
+                self.game.restart(new_game=ok and body.get("new") is True, next_day=ok and body.get("next") is True)
             else:
                 self._send(404, b'{"error":"khong co"}')
                 return
@@ -222,18 +289,26 @@ def main(argv=None) -> int:
     p.add_argument("--scenario")
     p.add_argument("--inventory", help="chỉ với quan: nạp kho từ file")
     p.add_argument("--inventory-out", dest="inventory_out", help="chỉ với gather: ghi kho khi kết thúc buổi")
+    p.add_argument("--debug-stock", dest="debug_stock", action="store_true",
+                   help="chỉ với quan: luôn đầy nguyên liệu (debug)")
+    p.add_argument("--classic", action="store_true",
+                   help="chỉ với quan: tắt phần sáng tạo (1 bếp, 1 bàn, đúng số liệu contract)")
+    p.add_argument("--day", type=int, default=1, help="chỉ với quan sáng tạo: ngày bắt đầu (độ khó tăng theo ngày)")
     a = p.parse_args(argv)
     try:
         if a.inventory and a.mode != "quan":
             raise BadInput("--inventory chỉ dùng với quan")
         if a.inventory_out and a.mode != "gather":
             raise BadInput("--inventory-out chỉ dùng với gather")
+        if a.debug_stock and a.mode != "quan":
+            raise BadInput("--debug-stock chỉ dùng với quan")
         tuning = load_contract()["tuning"]
         scenario = load_scenario(a.scenario, a.mode, tuning)
         inventory = read_inventory(a.inventory) if a.inventory else None
         if inventory is not None and "stock" in scenario:
             raise BadInput("vừa có quan.stock vừa có --inventory")
-        game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out)
+        game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, a.debug_stock,
+                        extras=(a.mode == "quan" and not a.classic), day=max(1, a.day))
         server = LiveServer(game, a.host, a.port)
     except BadInput as e:
         sys.stderr.write(f"đầu vào sai: {e}\n")
