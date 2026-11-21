@@ -31,11 +31,13 @@ class GatherSim:
     mode = "gather"
     phase = "gather"
 
-    def __init__(self, tuning, scenario, streams, ids):
+    def __init__(self, tuning, scenario, streams, ids, creative=False):
         t = tuning["gather"]
         self.t = t
         self.rng = streams
         self.ids = ids
+        self.creative = bool(creative)
+        self._sprinting = False
         self.day = scenario.get("day", 1)
         self.phase_tick = 0
         p = scenario.get("player", {})
@@ -178,6 +180,7 @@ class GatherSim:
             if prev_u >= self._spoiled_u and new_u < self._spoiled_u:
                 events.append(("spoiled", {"item_id": iid, "kind": it["kind"], "location": "hold"}))
         # 2. bơi + chặn mép + vùng + oxy + ngạt
+        self._sprinting = self.creative and bool(inp.held.get("sprint", False))
         was_at_surface = self._at_surface()
         self._move(inp)
         now_at_surface = self._at_surface()
@@ -190,7 +193,8 @@ class GatherSim:
             self.zero_oxy_ticks = 0
         else:
             prev_oxygen = self.oxygen_ticks
-            self.oxygen_ticks = max(0, self.oxygen_ticks - 1)
+            drain = 2 if self._sprinting else 1
+            self.oxygen_ticks = max(0, self.oxygen_ticks - drain)
             if prev_oxygen > 0 and self.oxygen_ticks == 0:
                 events.append(("oxygen_empty", {"oxygen_ticks": 0}))
             if self.oxygen_ticks == 0:
@@ -450,7 +454,7 @@ class GatherSim:
         events.append(("gather_end", {"reason": reason, "inventory": {"items": self.inventory_items()}}))
 
     def _move(self, inp):
-        speed = self.t["swim_speed"]
+        speed = self.t["swim_speed"] * (1.5 if self._sprinting else 1.0)
         mx, md = inp.move
         self.vel = ramp_velocity(self, (mx * speed, md * speed), int(self.t["ramp_max_ticks"]))
         if (mx, md) != (0.0, 0.0):
