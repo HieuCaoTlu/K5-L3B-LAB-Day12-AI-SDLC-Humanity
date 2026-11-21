@@ -34,14 +34,13 @@
 - **Điều tệ:**
   - Chưa gắn tag `phase-1`…`phase-3` đúng hạn (trên GitHub chưa có tag nào khi vào Phase 4).
   - Gần như không có review chéo trên GitHub: phần lớn PR do chính tác giả merge; lỗi lọt vào `main` (ví dụ `updateMenu` gọi biến `br` đã xoá, xem dưới).
-  - Commit dưới nhiều tên/email; có tác giả **"Hai Duong" (9 commit) chưa khớp ai trong `TEAM.md`** — cần đối chiếu, nếu không commit đó không được tính.
+  - Commit dưới nhiều tên/email (ví dụ "Le Nguyen" và "lbNGuyen06", "Đạt" và "Thành Đạt").
   - Khách ở Quán dùng hình Chiikawa / Hachiware / Usagi (có bản quyền), trái quy định asset của lab.
-- **Số liệu** (`git shortlog -sn --no-merges` trên `main` + nhánh Phase 4; PR trên GitHub):
+- **Số liệu** (`git shortlog -sn --no-merges` trên `main`, bỏ 9 commit "Hai Duong" là commit dựng starter của giảng viên trước khi fork; PR trên GitHub):
 
   | Tên trong git | Commit | Tài khoản GitHub | PR |
   |---|---|---|---|
   | Đạt | 14 | liliustwocout | 6 |
-  | Hai Duong | 9 | (chưa rõ) | — |
   | HieuCaoTlu | 8 | HieuCaoTlu | 3 |
   | Le Nguyen | 8 | lbNGuyen06 | 4 |
   | Cao Thanh Tùng | 6 | TungCTT | 5 |
