@@ -19,6 +19,7 @@ def build_tuning(base: dict, day: int = 1, money: int = START_MONEY) -> dict:
     t = copy.deepcopy(base)
     q = t["quan"]
     t["freshness"] = {"initial": 100, "gather_decay_per_s": 0.5, "quan_decay_per_s": 0.25, "spoiled_below": 30}  # Mùa Nước Nổi
+    q["flex_serve"] = True  # món nấu cho khách này vẫn đưa được cho khách khác gọi cùng món (không phải đưa theo thứ tự)
     q["wait_for_stock"] = True  # khách vẫn tới khi chưa có hàng; mua nguyên liệu ở ông Hai rồi nấu (không cần --debug-stock)
     q["duration_s"] = 90  # ca tối chơi thử rút còn 1 phút 30 giây (contract chuẩn vẫn là 180 s)
     q["bounds"] = {"x": [0, 22], "z": [0, 12]}  # quán mở rộng (contract chuẩn: 16 × 10)

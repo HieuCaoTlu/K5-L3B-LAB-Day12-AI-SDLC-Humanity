@@ -599,10 +599,50 @@ class QuanSim:
             if not e["jobs"]:
                 e.update(state="idle", dish=None, cook_ticks_left=0, ready_ticks=0)
 
+    def _flex_match(self, c):
+        """Sáng tạo (flex_serve): món đang cầm nấu cho khách khác vẫn đưa được cho khách này nếu họ gọi đúng món đó.
+        Hai đơn đổi chỗ cho nhau (trạng thái, phần giữ nguyên liệu, giá chốt, việc đang nấu, món trên khay)."""
+        for it in list(self.tray):
+            c0, i0 = it.get("customer_id"), it.get("order")
+            if c0 is None or i0 is None or c0 == c["id"]:
+                continue
+            other = next((x for x in self.customers if x["id"] == c0), None)
+            if other is None or not (0 <= i0 < len(other["orders"])):
+                continue
+            held = {(t_.get("customer_id"), t_.get("order")) for t_ in self.tray}
+            cand = [(0 if o["state"] == "cooking" else 1, j) for j, o in enumerate(c["orders"])
+                    if o["dish_id"] == it["dish_id"] and o["state"] in ("cooking", "pending") and (c["id"], j) not in held]
+            if not cand:
+                continue
+            j = min(cand)[1]
+            a, b = other["orders"][i0], c["orders"][j]
+            for k in ("state", "items", "base_price"):
+                av, bv = a.get(k), b.get(k)
+                for o_, v_ in ((a, bv), (b, av)):
+                    if v_ is None:
+                        o_.pop(k, None)
+                    else:
+                        o_[k] = v_
+            swap = {(c0, i0): (c["id"], j), (c["id"], j): (c0, i0)}     # nối lại việc đang nấu / món trên khay theo hai đơn vừa đổi
+            for st in self.stoves:
+                for job in st["jobs"]:
+                    key = swap.get((job["customer_id"], job["order"]))
+                    if key:
+                        job["customer_id"], job["order"] = key
+            for t_ in self.tray:
+                if t_ is it:
+                    t_["customer_id"], t_["order"] = c["id"], j
+                else:
+                    key = swap.get((t_.get("customer_id"), t_.get("order")))
+                    if key:
+                        t_["customer_id"], t_["order"] = key
+
     def _use_table(self, e, events):
         c = next((c for c in self.customers if c["table_id"] == e["id"]), None)
         if not (c and c["state"] == "waiting"):
             return
+        if self.t.get("flex_serve"):
+            self._flex_match(c)
         for it in [x for x in self.tray if x.get("customer_id") == c["id"]]:
             i = it.get("order")
             if i is None or not (0 <= i < len(c["orders"])) or c["orders"][i]["state"] != "cooking":

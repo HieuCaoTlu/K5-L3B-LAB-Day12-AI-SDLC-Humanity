@@ -212,5 +212,34 @@ class FreshRules(unittest.TestCase):
         self.assertEqual(s.snapshot()["stock"], {"bong_sung": 1, "ca_loc": 2})                # không hao, xuất dạng đếm
 
 
+class FlexServe(unittest.TestCase):
+    def _setup(self, flex):
+        tun = copy.deepcopy(T12)
+        tun["quan"]["flex_serve"] = flex
+        stock = [item("I1", "ca_loc", 100), item("I2", "ca_loc", 100)]
+        s = session(stock, [cust("C1", "T1", order_tick=1), cust("C2", "T2", order_tick=2)], tuning=tun)
+        sim = s.sim
+        sim.pos = list(sim.stoves[0]["pos"])
+        step(s, 1, ("interact",))                       # bếp nấu cho C1 (đơn cũ nhất)
+        step(s, 6 * 60)
+        step(s, 1, ("interact",))                       # lấy món (nấu cho C1)
+        return s, sim
+
+    def test_flex_serve_gives_dish_to_other_customer_with_same_dish(self):
+        s, sim = self._setup(True)
+        sim.pos = list(sim.tables[1]["pos"])            # tới bàn của C2, không phải C1
+        rows = step(s, 1, ("interact",))
+        self.assertEqual([(e["name"], e["data"]["customer_id"]) for e in rows], [("served", "C2")])
+        self.assertEqual(sim.customers[1]["state"], "eating")
+        self.assertEqual(sim.customers[0]["orders"][0]["state"], "pending")    # C1 quay lại hàng chờ, giữ phần nguyên liệu của C2
+        self.assertTrue(sim.customers[0]["orders"][0]["items"])
+        self.assertEqual(sim.tray, [])
+
+    def test_strict_serve_when_flex_off(self):
+        s, sim = self._setup(False)
+        sim.pos = list(sim.tables[1]["pos"])
+        self.assertEqual(step(s, 1, ("interact",)), [])                          # core: món chỉ đưa đúng khách đã nấu cho
+
+
 if __name__ == "__main__":
     unittest.main()
