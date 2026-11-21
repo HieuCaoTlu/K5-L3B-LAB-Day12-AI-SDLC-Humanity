@@ -1,6 +1,6 @@
 """Cửa sổ chơi trực tiếp bằng TRÌNH DUYỆT, chỉ dùng thư viện chuẩn Python.
 
-    python3 -m chonoi.live --mode gather|quan [--seed N] [--port 8000]
+    python3 -m chonoi.live --mode gather|quan|day [--seed N] [--port 8000]
 
 Máy chủ HTTP nhỏ (ThreadingHTTPServer) phục vụ `chonoi/web/index.html` và hai API:
     GET  /state  -> snapshot JSON hiện tại (cùng trường như dòng snapshot của headless) + `meta` + `events`
@@ -41,9 +41,15 @@ class LiveGame:
     """Một lượt chơi + luồng nền bước 60 tick/s. Mọi truy cập trạng thái đi qua khóa."""
 
     def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None, debug_stock=False,
-                 extras=False, day=1):
+                 extras=False, day=1, scenarios=None):
         self.debug_stock = debug_stock
-        self.extras = bool(extras) and mode == "quan"  # phần sáng tạo: nhiều ngày, 6 bàn, ông bán hàng... (xem extras.py)
+        # mode "day": một ngày liền mạch, sáng (gather) rồi tối (quan); kho buổi sáng mang sang buổi tối
+        self.flow = mode == "day"
+        self._extras_opt = bool(extras)
+        self._scenarios = scenarios or {}
+        if self.flow:
+            mode = "gather"
+        self.extras = self._extras_opt and mode == "quan"  # phần sáng tạo: nhiều ngày, 6 bàn, ông bán hàng... (xem extras.py)
         self.mode = mode
         self.base_tuning = tuning
         self.tuning = tuning
@@ -60,9 +66,15 @@ class LiveGame:
 
     def _new_carry(self):
         """Trạng thái đầu ngày (nhiều ngày: tiền, kho, uy tín chuyển sang ngày sau)."""
-        self._carry = {"day": self._start_day, "money": START_MONEY, "stock": dict(self._inventory or {}), "rep": None, "upgrades": {}}
+        stock = {}
+        for it in self._inventory or []:
+            stock[it["kind"]] = stock.get(it["kind"], 0) + 1
+        self._carry = {"day": self._start_day, "money": START_MONEY, "stock": stock, "rep": None, "upgrades": {}}
 
     def _reset(self):
+        self.extras = self._extras_opt and self.mode == "quan"
+        if self.flow:
+            self._scenario = self._scenarios.get(self.mode, {})
         if self.extras:
             c = self._carry
             self.tuning = build_tuning(self.base_tuning, c["day"], c["money"])
@@ -71,6 +83,12 @@ class LiveGame:
                 scen.setdefault("reputation", c["rep"])
             scen["upgrades"] = dict(c.get("upgrades", {}))
             self._args = (self.mode, self.tuning, scen, self._seed + c["day"] - 1, dict(c["stock"]))
+        elif self.flow and self.mode == "quan":  # quán cổ điển trong ngày liền mạch: kho = phần mang từ buổi sáng
+            self.tuning = self.base_tuning
+            self._args = (self.mode, self.tuning, self._scenario, self._seed + self._carry["day"] - 1, dict(self._carry["stock"]))
+        elif self.flow:
+            self.tuning = self.base_tuning
+            self._args = (self.mode, self.tuning, self._scenario, self._seed + self._carry["day"] - 1, None)
         else:
             self._args = (self.mode, self.tuning, self._scenario, self._seed, self._inventory)
         self.session = Session(*self._args)
@@ -133,8 +151,11 @@ class LiveGame:
             snap["finished"] = self.session.done
             snap["reason"] = self.session.sim.reason if self.session.done else None
             snap["error"] = self.error
-            if self.extras:
+            if self.extras or self.flow:
                 snap["day"] = self._carry["day"]
+            if self.flow:
+                snap["flow"] = True
+                snap["carry_stock"] = dict(self._carry["stock"])
             return json.dumps(snap, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
     def set_input(self, body: dict):
@@ -155,7 +176,9 @@ class LiveGame:
 
     def restart(self, new_game=False, next_day=False):
         with self._lock:
-            if self.extras:
+            if self.flow:
+                self._restart_flow(new_game, next_day)
+            elif self.extras:
                 sim = self.session.sim
                 if new_game:
                     self._new_carry()
@@ -164,6 +187,24 @@ class LiveGame:
                                    "stock": dict(sim.stock), "rep": sim.reputation,
                                    "upgrades": dict(sim.up)}
             self._reset()
+
+    def _restart_flow(self, new_game, advance):
+        """Ngày liền mạch: sáng xong -> sang tối (mang kho); tối hết giờ -> sáng ngày kế (mang tiền, kho còn lại, uy tín)."""
+        sim = self.session.sim
+        if new_game:
+            self._new_carry()
+            self.mode = "gather"
+        elif advance and self.session.done:
+            if self.mode == "gather":
+                stock = dict(self._carry["stock"])
+                for it in sim.inventory_items():
+                    stock[it["kind"]] = stock.get(it["kind"], 0) + 1
+                self._carry["stock"] = stock
+                self.mode = "quan"
+            elif sim.reason == "time":
+                self._carry = {"day": self._carry["day"] + 1, "money": sim.money, "stock": dict(sim.stock),
+                               "rep": sim.reputation, "upgrades": dict(getattr(sim, "up", {}))}
+                self.mode = "gather"
 
     def upgrade(self, key):
         """Mua nâng cấp nhân vật (chỉ chế độ quán sáng tạo)."""
@@ -297,7 +338,7 @@ class LiveServer:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="chonoi.live", description="Chơi trực tiếp trên trình duyệt (starter).")
-    p.add_argument("--mode", required=True, choices=["gather", "quan"])
+    p.add_argument("--mode", required=True, choices=["gather", "quan", "day"])
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--port", type=int, default=8000, help="0 = cổng ngẫu nhiên")
     p.add_argument("--host", default="127.0.0.1")
@@ -315,15 +356,22 @@ def main(argv=None) -> int:
             raise BadInput("--inventory chỉ dùng với quan")
         if a.inventory_out and a.mode != "gather":
             raise BadInput("--inventory-out chỉ dùng với gather")
-        if a.debug_stock and a.mode != "quan":
+        if a.debug_stock and a.mode not in ("quan", "day"):
             raise BadInput("--debug-stock chỉ dùng với quan")
         tuning = load_contract()["tuning"]
-        scenario = load_scenario(a.scenario, a.mode, tuning)
+        if a.mode == "day":
+            if a.scenario or a.inventory or a.inventory_out:
+                raise BadInput("mode day tự nối sáng và tối, không dùng --scenario/--inventory/--inventory-out")
+            scenarios = {m: load_scenario(None, m, tuning) for m in ("gather", "quan")}
+            scenario = scenarios["gather"]
+        else:
+            scenarios = None
+            scenario = load_scenario(a.scenario, a.mode, tuning)
         inventory = read_inventory(a.inventory) if a.inventory else None
         if inventory is not None and "stock" in scenario:
             raise BadInput("vừa có quan.stock vừa có --inventory")
         game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, a.debug_stock,
-                        extras=(a.mode == "quan" and not a.classic), day=max(1, a.day))
+                        extras=(a.mode in ("quan", "day") and not a.classic), day=max(1, a.day), scenarios=scenarios)
         server = LiveServer(game, a.host, a.port)
     except BadInput as e:
         sys.stderr.write(f"đầu vào sai: {e}\n")
