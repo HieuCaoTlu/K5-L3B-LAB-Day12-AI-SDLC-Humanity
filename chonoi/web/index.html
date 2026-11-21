@@ -13,6 +13,8 @@
   #menubar button { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
   #menubar button:hover:not(:disabled) { background: #3b566b; }
   #menubar button:disabled { opacity: .4; cursor: not-allowed; }
+  body > #btnRetry { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
+  body > #btnRetry:hover { background: #3b566b; }
   #rules { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); width: min(560px, 92vw); max-height: calc(100vh - 80px); overflow: auto;
     background: #fff8e1; color: #4e342e; border: 3px solid #8d6e63; border-radius: 16px; padding: 14px 18px; z-index: 9; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
   #rules h3 { margin: 0 0 8px; } #rules ul { margin: 4px 0 8px; padding-left: 20px; } #rules li { margin: 3px 0; }
@@ -1058,6 +1060,20 @@ const GC = {
 const LINH_SCHOOL = [[-1.1, -0.5], [0.6, -0.7], [-0.2, 0.45], [1.3, 0.3]];   // đàn cá linh: 4 con quanh tâm đàn
 let senLeft = false, showLog = false;
 const CROC_FACE = {};   // id cá sấu -> {x khung trước, đang quay trái?}
+// Contract v1.2: món trong giỏ / kho là {id, kind, fresh 0..100}; bản cũ là chuỗi kind -> đọc được cả hai.
+const itemKind = (it) => (typeof it === "string" ? it : it && it.kind);
+const itemFresh = (it) => (it && typeof it === "object" && typeof it.fresh === "number" ? it.fresh : null);
+const FRESH_SPOILED = 30;   // chỉ để TÔ MÀU: khớp tuning.freshness.spoiled_below (live chỉ gửi tuning[mode] nên UI không đọc được)
+const freshColor = (f) => (f >= 60 ? "#7bd66b" : f >= FRESH_SPOILED ? "#ffd23f" : "#ff5a5a");
+function countItems(items) {   // {kind: n} hoặc [{id, kind, fresh}] -> {kind: {n, spoiled}}
+  const out = {};
+  if (Array.isArray(items)) items.forEach((it) => {
+    const k = itemKind(it), f = itemFresh(it), c = (out[k] = out[k] || { n: 0, spoiled: 0 });
+    c.n++; if (f !== null && f < FRESH_SPOILED) c.spoiled++;
+  });
+  else if (items) Object.keys(items).forEach((k) => { if (items[k] > 0) out[k] = { n: items[k], spoiled: 0 }; });
+  return out;
+}
 addEventListener("keydown", (e) => { if (!e.repeat && e.key.toLowerCase() === "l") showLog = !showLog; });
 // Enter: buổi sáng đã kết thúc (ngất / cập bến / hết giờ) -> chơi lại ngay, khỏi cầm chuột (giống nút "Bắt đầu lại").
 // preventDefault để Enter không "bấm" thêm nút đang được focus -> tránh restart hai lần.
@@ -1264,12 +1280,22 @@ function gatherHudBottom(w, h, bottom) {
   woodPanel(0, y0, w, bottom);
   if (snap.hold && snap.hold_capacity) {
     const cap = snap.hold_capacity, sz = Math.max(18, Math.min(36, (w - 520) / cap - 4));
+    const nSpoiled = snap.hold.filter((it) => { const f = itemFresh(it); return f !== null && f < FRESH_SPOILED; }).length;
     htext("GIỎ " + snap.hold.length + "/" + cap, 14, y0 + bottom / 2 - 1, { size: 15, color: snap.hold.length >= cap ? "#ff9a8a" : GC.paper });
+    if (nSpoiled) htext(nSpoiled + " ươn", 112 + cap * (sz + 4) + 8, y0 + bottom / 2 - 1, { size: 13, color: "#ff9a8a" });
     for (let i = 0; i < cap; i++) {
       const x0 = 112 + i * (sz + 4), yy = y0 + (bottom - sz) / 2 - 2;
       ctx.fillStyle = GC.rim2; ctx.fillRect(x0 - 2, yy - 2, sz + 4, sz + 4);
       ctx.fillStyle = i < snap.hold.length ? GC.slotIn : GC.slot; ctx.fillRect(x0, yy, sz, sz);
-      if (snap.hold[i]) kindIcon(snap.hold[i], x0 + sz / 2, yy + sz / 2, sz / 14);
+      const it = snap.hold[i];
+      if (it) {
+        const f = itemFresh(it), bad = f !== null && f < FRESH_SPOILED;
+        ctx.globalAlpha = bad ? 0.45 : 1; kindIcon(itemKind(it), x0 + sz / 2, yy + sz / 2 - 2, sz / 14); ctx.globalAlpha = 1;
+        if (f !== null) {   // vạch độ tươi dưới đáy ô
+          ctx.fillStyle = "#1d120a"; ctx.fillRect(x0 + 2, yy + sz - 5, sz - 4, 3);
+          ctx.fillStyle = freshColor(f); ctx.fillRect(x0 + 2, yy + sz - 5, Math.max(1, (sz - 4) * f / 100), 3);
+        }
+      }
     }
   }
   htext("WASD bơi · E hái/cập bến · Space bắt · Enter chơi lại · L nhật ký", w - 14, y0 + bottom / 2 - 1, { size: 13, align: "right", color: "#e8d3a6" });
@@ -1278,10 +1304,11 @@ function gatherHudBottom(w, h, bottom) {
 // ---------- phản hồi sự kiện: chữ nổi, bọt nước, nháy đỏ ----------
 const FX = { seen: new Set(), items: [], splashes: [], flash: -9, lastTick: -1 };
 function fxOf(e, p) {
-  const d = e.data || {}, name = (k) => KIND_NAME[k] || k, at = p && p.pos ? p.pos.slice() : [0, 0];
+  const d = e.data || {}, name = (k) => KIND_NAME[itemKind(k)] || itemKind(k), at = p && p.pos ? p.pos.slice() : [0, 0];
   switch (e.name) {
     case "gather": return { text: "+" + d.amount + " " + name(d.kind), color: "#fff3b0", at };
     case "fish_caught": return { text: "+" + d.yield + " " + name(d.kind), color: "#c8f7ff", at };
+    case "spoiled": return { text: name(d.kind) + " bị ươn rồi!", color: "#e0b070", at, small: true };
     case "hold_full": return { text: "Giỏ đầy! (cần " + d.required + ", còn " + d.free + ")", color: "#ffb4a8", at };
     case "oxygen_empty": return { text: "Hết oxy! Ngoi lên mau!", color: "#ff8a80", at, big: true };
     case "choke": return { text: "Ngạt nước! −1 ♥", color: "#ff5252", at, big: true, flash: true };
@@ -1355,7 +1382,7 @@ function gatherEndPanel(w, h) {                    // bảng kết thúc buổi 
   const pw = Math.min(520, w - 40), ph = 190, x0 = (w - pw) / 2, y0 = h / 2 - ph / 2;
   woodPanel(x0, y0, pw, ph);
   htext(title, w / 2, y0 + 34, { size: 24, align: "center", color: snap.reason === "fainted" ? "#ff9a8a" : GC.gold });
-  const kinds = items ? Object.keys(items).filter((k) => items[k] > 0).sort() : [];
+  const counts = countItems(items), kinds = Object.keys(counts).sort();
   if (snap.reason === "fainted") htext(byCroc ? "Mất hết đồ trong giỏ. Lần sau tránh xa cá sấu nghen!" : "Mất hết đồ trong giỏ. Lần sau nhớ ngoi lên lấy hơi!", w / 2, y0 + 82, { size: 14, align: "center" });
   else if (!kinds.length) htext("Giỏ trống trơn — tối nay quán khó bán rồi.", w / 2, y0 + 82, { size: 14, align: "center" });
   else {
@@ -1364,8 +1391,8 @@ function gatherEndPanel(w, h) {                    // bảng kết thúc buổi 
     kinds.forEach((k, i) => {
       const cx = sx0 + i * cw + 30;
       kindIcon(k, cx, y0 + 108, 3);
-      htext("×" + items[k], cx + 26, y0 + 108, { size: 18 });
-      htext(KIND_NAME[k] || k, cx + 14, y0 + 134, { size: 11, align: "center", color: "#e8d3a6" });
+      htext("×" + counts[k].n, cx + 26, y0 + 108, { size: 18 });
+      htext((KIND_NAME[k] || k) + (counts[k].spoiled ? " (" + counts[k].spoiled + " ươn)" : ""), cx + 14, y0 + 134, { size: 11, align: "center", color: counts[k].spoiled ? "#ff9a8a" : "#e8d3a6" });
     });
   }
   const blink = Math.floor(performance.now() / 500) % 2 ? GC.gold : GC.paper;
@@ -2363,6 +2390,9 @@ function updateMenu() {
   cv.style.marginTop = showBar ? "44px" : "0px";
   cv.style.height = showBar ? "calc(100vh - 44px)" : "100vh";
 
+  // Nút nằm trong #menubar; gather một ngày ẩn menubar -> đưa nút ra <body> để vẫn bấm được, sang quán thì trả về chỗ cũ.
+  if (isGather && !showBar && br.parentNode === mb) document.body.appendChild(br);
+  else if ((!isGather || showBar) && br.parentNode !== mb) mb.insertBefore(br, bw);
   if (isGather) {
     br.style.position = "fixed";                    // HUD gỗ gather: nút nằm ngay bên trái bản đồ nhỏ
     br.style.left = "";
@@ -2370,11 +2400,8 @@ function updateMenu() {
     br.style.top = (showBar ? 50 : 6) + "px";
     br.style.zIndex = "11";
   } else {
-    br.style.position = "fixed";
-    br.style.left = "";
-    br.style.right = "12px";
-    br.style.top = "6px";
-    br.style.zIndex = "11";
+    // quán: nút nằm lại trong thanh menu theo thứ tự bình thường (trước đây cố định góc phải nên đè nút Âm thanh)
+    br.style.position = br.style.left = br.style.right = br.style.top = br.style.zIndex = "";
   }
 }
 
