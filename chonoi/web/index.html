@@ -13,8 +13,6 @@
   #menubar button { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
   #menubar button:hover:not(:disabled) { background: #3b566b; }
   #menubar button:disabled { opacity: .4; cursor: not-allowed; }
-  body > #btnRetry { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
-  body > #btnRetry:hover { background: #3b566b; }
   #rules { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); width: min(560px, 92vw); max-height: calc(100vh - 80px); overflow: auto;
     background: #fff8e1; color: #4e342e; border: 3px solid #8d6e63; border-radius: 16px; padding: 14px 18px; z-index: 9; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
   #rules h3 { margin: 0 0 8px; } #rules ul { margin: 4px 0 8px; padding-left: 20px; } #rules li { margin: 3px 0; }
@@ -33,7 +31,6 @@
   <button id="btnRules">📖 Luật chơi</button>
   <button id="btnUpg">⬆ Nâng cấp</button>
   <button id="btnNext">▶ Ngày tiếp theo</button>
-  <button id="btnRetry">↻ Làm lại</button>
   <button id="btnNew">⏮ Chơi lại từ đầu</button>
   <span id="audioSpacer"></span>
   <button id="btnAudio" title="Bật/tắt nhạc &amp; âm thanh (M)">🔊 Âm thanh</button>
@@ -2337,7 +2334,6 @@ function postRestart(body) {
 document.getElementById("btnRules").onclick = () => { playUiClick(); showRules(rulesEl.style.display !== "block"); };
 document.getElementById("btnUpg").onclick = () => { playUiClick(); toggleUpg(); };
 document.getElementById("btnNext").onclick = () => postRestart({ next: true });
-document.getElementById("btnRetry").onclick = () => postRestart({});
 document.getElementById("btnNew").onclick = () => postRestart({ new: true });
 
 // ---------- điều khiển âm thanh ----------
@@ -2378,7 +2374,7 @@ function updateMenu() {
   if (!snap) return;
   const multi = snap.day !== undefined;
   const bn = document.getElementById("btnNext"), bw = document.getElementById("btnNew");
-  const bu = document.getElementById("btnUpg"), br = document.getElementById("btnRetry");
+  const bu = document.getElementById("btnUpg");
   const mb = document.getElementById("menubar");
   bn.style.display = bw.style.display = multi ? "" : "none";
   bn.disabled = !(snap.finished && snap.reason === "time");
@@ -2389,20 +2385,6 @@ function updateMenu() {
   mb.style.display = showBar ? "flex" : "none";
   cv.style.marginTop = showBar ? "44px" : "0px";
   cv.style.height = showBar ? "calc(100vh - 44px)" : "100vh";
-
-  // Nút nằm trong #menubar; gather một ngày ẩn menubar -> đưa nút ra <body> để vẫn bấm được, sang quán thì trả về chỗ cũ.
-  if (isGather && !showBar && br.parentNode === mb) document.body.appendChild(br);
-  else if ((!isGather || showBar) && br.parentNode !== mb) mb.insertBefore(br, bw);
-  if (isGather) {
-    br.style.position = "fixed";                    // HUD gỗ gather: nút nằm ngay bên trái bản đồ nhỏ
-    br.style.left = "";
-    br.style.right = (innerWidth >= 1100 ? 268 : 12) + "px";
-    br.style.top = (showBar ? 50 : 6) + "px";
-    br.style.zIndex = "11";
-  } else {
-    // quán: nút nằm lại trong thanh menu theo thứ tự bình thường (trước đây cố định góc phải nên đè nút Âm thanh)
-    br.style.position = br.style.left = br.style.right = br.style.top = br.style.zIndex = "";
-  }
 }
 
 function lowXY(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / SC, (e.clientY - r.top) / SC]; }
