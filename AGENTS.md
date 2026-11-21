@@ -26,4 +26,6 @@
 - Sáng tạo thêm được khuyến khích nhưng phải tắt ở headless (xem README, mục "Tự do sáng tạo").
 
 ## Skills / hooks của nhóm
-- (Ghi tên và khi nào dùng; tối thiểu 2 skill/hook/command nhóm tự viết, đặt ở `.agents/skills/` hoặc tương đương.)
+- Chạy từ gốc repo; các command tự viết nằm trong `tools/`.
+- Command tạo asset: `python3 tools/quan_assets.py build` — xuất lại bộ Quán và preview từ nét pixel đã chốt (cần Pillow).
+- Command kiểm asset: `python3 tools/quan_assets.py check` — chạy sau khi đổi PNG/frame; kiểm kích thước, alpha, lưới pixel, biên tile và manifest.

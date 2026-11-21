@@ -1,0 +1,225 @@
+{
+  "sample_rate": 32000,
+  "assets": [
+    {
+      "path": "bgm_quan_night.wav",
+      "category": "bgm",
+      "loop": true,
+      "sample_rate": 32000,
+      "duration_s": 34.56,
+      "peak": 0.84,
+      "rms_db": -12.82,
+      "description": "Cozy Mekong floating market evening loop (16 bars, ~111 BPM, F pentatonic)",
+      "sha256": "9fa77cd9de7694adc911d8f784dd93d5c82f159fbb9aaa618b3ff70d980ebfd4"
+    },
+    {
+      "path": "bgm_quan_rush.wav",
+      "category": "bgm",
+      "loop": true,
+      "sample_rate": 32000,
+      "duration_s": 14.4,
+      "peak": 0.78,
+      "rms_db": -11.47,
+      "description": "Energetic final-25s rush loop (8 bars, ~133 BPM, G pentatonic)",
+      "sha256": "fde6473e5b12636d9394baac654a5a706f758e2575445c5fafc46183a45e3e89"
+    },
+    {
+      "path": "amb_quan_river_night.wav",
+      "category": "ambience",
+      "loop": true,
+      "sample_rate": 32000,
+      "duration_s": 12.0,
+      "peak": 0.45,
+      "rms_db": -24.07,
+      "description": "Mekong night river water lap, crickets & hearth ambience loop",
+      "sha256": "fce4bf24afc5696f2160f401142f34fbfb8ecdbe05ba0164f1274cdf352e53f7"
+    },
+    {
+      "path": "jingle_quan_end.wav",
+      "category": "jingle",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 3.0,
+      "peak": 0.88,
+      "rms_db": -14.44,
+      "description": "Shift complete celebratory Vietnamese pentatonic fanfare",
+      "sha256": "ad9ea28c6f3ed805dfbaf42e0c8c69b5d4c08c2adbc24cbedbe2f477ae474ec3"
+    },
+    {
+      "path": "sfx_customer_arrive.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.65,
+      "peak": 0.86,
+      "rms_db": -13.61,
+      "description": "Boat nudge + bamboo shop chime greeting",
+      "sha256": "50a474c78777fc28a3f12b822cb6ee50777005827a02b0127235e3d188b47b97"
+    },
+    {
+      "path": "sfx_cook_start.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.72,
+      "peak": 0.85,
+      "rms_db": -15.12,
+      "description": "Charcoal flame puff + hot pan sizzle",
+      "sha256": "c91950e0cef63c61694d8102ee5912a64e887606a491ff40e875f8400d55b8c7"
+    },
+    {
+      "path": "sfx_fridge_open.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.48,
+      "peak": 0.84,
+      "rms_db": -14.78,
+      "description": "Cold fridge door pop + fizzy ice clink (Coca)",
+      "sha256": "99ce3e4d0a25c984c72901e4b2c8d3bb8c631a7c154c96c8d8989136ad55dfa7"
+    },
+    {
+      "path": "sfx_dish_ready.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.68,
+      "peak": 0.88,
+      "rms_db": -14.44,
+      "description": "Kitchen bell ding + 2-note ready chime",
+      "sha256": "4e530e5fe15e727a25e0b30c94a1cd52306aeba10d958926fcf3dca642a441c1"
+    },
+    {
+      "path": "sfx_dish_pickup.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.22,
+      "peak": 0.82,
+      "rms_db": -13.8,
+      "description": "Ceramic plate & tray pickup pop",
+      "sha256": "58123ecbd5ea38857abf04d1d4f00e8edad117f8869dc82e7061da15742cfc38"
+    },
+    {
+      "path": "sfx_serve.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.45,
+      "peak": 0.84,
+      "rms_db": -14.17,
+      "description": "Plate set on table + happy chirp",
+      "sha256": "4505ad7893cb4b584d8323ccfbca314d7b127db4f643d0c3c4234848506c17e1"
+    },
+    {
+      "path": "sfx_coin_pay.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.54,
+      "peak": 0.88,
+      "rms_db": -15.19,
+      "description": "Coin clink + cash chime",
+      "sha256": "48c74b0b17a46d878bcba2713bc209642c42bd1c8e2b02b0e99db2b9ddbe2c8e"
+    },
+    {
+      "path": "sfx_coin_tip.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.78,
+      "peak": 0.88,
+      "rms_db": -14.2,
+      "description": "Double sparkly coin + tip arpeggio (boa)",
+      "sha256": "51c379864f71acc63b61795b47d2f537edcca4c6bc1e76c8f13945dbe410cef9"
+    },
+    {
+      "path": "sfx_customer_angry.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.42,
+      "peak": 0.6,
+      "rms_db": -12.03,
+      "description": "Grumpy warning double-tone",
+      "sha256": "ad2c7112e9c1dd29927a13656f4aaaff82fb1e90f26c5087a80a4cf09bbb3bb7"
+    },
+    {
+      "path": "sfx_customer_leave.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.75,
+      "peak": 0.82,
+      "rms_db": -11.39,
+      "description": "Descending slide + paddle splash",
+      "sha256": "b4006a4942e8d1415f02cf6c96381d41e5c87c2b23cb6daa15172b78e71b2dc9"
+    },
+    {
+      "path": "sfx_dish_waste.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.38,
+      "peak": 0.8,
+      "rms_db": -13.48,
+      "description": "Hollow deflated thud",
+      "sha256": "3d17ac0e9f123460b193214d25bba7757fd6f7eff3fba0ac3945d2a85c676a6e"
+    },
+    {
+      "path": "sfx_buy.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.44,
+      "peak": 0.84,
+      "rms_db": -15.48,
+      "description": "Supply basket rustle + coin clink (Ông Hai)",
+      "sha256": "c3ffe76e31d4ccd910578047d93b2038217c91a44dbb78dff301798c0a056602"
+    },
+    {
+      "path": "sfx_upgrade.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.84,
+      "peak": 0.72,
+      "rms_db": -11.72,
+      "description": "Rising pentatonic upgrade sparkle",
+      "sha256": "cb828af4acaf852731f47840e3bf77f430ada3fba3f79849ad393b0df5500a3e"
+    },
+    {
+      "path": "sfx_error.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.24,
+      "peak": 0.78,
+      "rms_db": -15.51,
+      "description": "Soft wooden double-tap error",
+      "sha256": "c9f1a7ca7ce266a97fa45df9dc396bb37cc9ce445787b24e65476dda9b88734f"
+    },
+    {
+      "path": "sfx_step_wood.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.11,
+      "peak": 0.65,
+      "rms_db": -16.0,
+      "description": "Soft wooden boat plank footstep",
+      "sha256": "16ac03f873f4b6c524f24d7c8b235c8f76c846ff77e4df1a27ab1e2cc2a1d22e"
+    },
+    {
+      "path": "sfx_ui_click.wav",
+      "category": "sfx",
+      "loop": false,
+      "sample_rate": 32000,
+      "duration_s": 0.11,
+      "peak": 0.72,
+      "rms_db": -16.33,
+      "description": "Crisp bamboo UI click",
+      "sha256": "273620575f1dfdc7b8a7ef7b620753a31abbbd40522ad5ff91ea0edb4a230da9"
+    }
+  ]
+}

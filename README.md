@@ -54,3 +54,9 @@ Hết giờ mỗi phase thì gắn tag rồi đi tiếp; chỗ chưa xong ghi tr
 
 - Dùng AI thoải mái; **không sao chép repo của nhóm khác**; bằng chứng phải thật.
 - Nhân vật, bối cảnh là bản gốc của lab; asset ngoài chỉ dùng CC0/CC-BY/MIT hoặc tự tạo, ghi nguồn trong `CREDITS.md`. Không commit API key, token, `.env`.
+
+## Sáng tạo của nhóm
+
+- Bộ [asset Quán pixel nhỏ](chonoi/web/assets/quan/README.md): Út Sen vẫn là người; khách chó, mèo, vịt, ếch là tạo hình trang trí. Có đủ đi và bưng món bốn hướng, biểu cảm khách, bếp và hiệu ứng chuyển động.
+- Các PNG chỉ dùng cho phần hiển thị; headless không tải ảnh và không có luật phụ thuộc vào sprite.
+- [Xem ảnh](docs/proof/quan-assets-preview.png) · [Xem chuyển động](docs/proof/quan-motion-preview.gif). Các PNG đang được bàn giao riêng, chưa nối vào renderer.

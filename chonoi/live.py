@@ -20,6 +20,7 @@ import threading
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import unquote
 
 from .contract import load_contract
 from .errors import BadInput
@@ -33,6 +34,7 @@ WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 TICK_S = 1.0 / 60.0
 MAX_BODY = 4096
 RECENT_EVENTS = 40
+_ASSET_TYPES = {".png": "image/png", ".wav": "audio/wav", ".json": "application/json", ".gif": "image/gif"}
 
 
 class LiveGame:
@@ -209,8 +211,21 @@ class _Handler(BaseHTTPRequestHandler):
                     self._send(200, f.read(), "text/html; charset=utf-8")
             except OSError:
                 self._send(404, b'{"error":"thieu index.html"}')
+        elif path.startswith("/assets/"):
+            self._send_asset(path[len("/assets/"):])
         else:
             self._send(404, b'{"error":"khong co"}')
+
+    def _send_asset(self, rel):
+        """Phục vụ file tĩnh trong web/assets (ảnh, âm thanh, manifest); chặn thoát khỏi thư mục."""
+        root = os.path.realpath(os.path.join(WEB_DIR, "assets"))
+        full = os.path.realpath(os.path.join(root, unquote(rel)))
+        ctype = _ASSET_TYPES.get(os.path.splitext(full)[1].lower())
+        if ctype is None or os.path.commonpath([root, full]) != root or not os.path.isfile(full):
+            self._send(404, b'{"error":"khong co"}')
+            return
+        with open(full, "rb") as f:
+            self._send(200, f.read(), ctype)
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
