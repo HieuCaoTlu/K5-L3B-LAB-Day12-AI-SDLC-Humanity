@@ -1495,30 +1495,23 @@ function drawDog(cx, cy, m, kind) {
   else R(PL.ink, cx - 3, cy + 8, 6, 1);
 }
 const EMOTE = { vui: "ui/emote_vui.png", gian: "ui/emote_gian.png", doi: "ui/emote_doi.png" };
-const SPRITE_NAMES = ["Chó", "Mèo", "Vịt", "Ếch"];       // theo khach_1..4
-const BLOB_NAMES = ["Chó nâu", "Chó xám", "Chiikawa", "Hachiware", "Usagi"];
-function nameTag(label, cx, top, color) {              // bảng tên pixel nhỏ phía trên đầu nhân vật (vẽ ở lớp overlay)
+// tên khách miền Tây, chọn ổn định theo id (khách cùng id luôn cùng tên)
+const CUST_NAMES = ["Chiikawa", "Hachiware", "Usagi"];
+function nameTag(label, cx, top, color) {              // bảng tên pixel nhỏ (vẽ ở lớp overlay, chữ không đổ bóng để dấu không bị nhòe)
   ov.push(() => {
-    const w = (label.length * 2.9 + 5) * SC, h = 7 * SC, bx = Math.round(OX + cx * SC - w / 2), by = Math.round(OY + top * SC - h);
+    const w = (label.length * 3.4 + 6) * SC, h = 8 * SC, bx = Math.round(OX + cx * SC - w / 2), by = Math.round(OY + top * SC - h);
     ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(bx + SC, by + SC, w, h);
     ctx.fillStyle = "#241410"; ctx.fillRect(bx - SC, by - SC, w + 2 * SC, h + 2 * SC);
     ctx.fillStyle = color || "#fff3c4"; ctx.fillRect(bx, by, w, h);
-    ptext(label, (bx + w / 2 - OX) / SC, (by + h / 2 - OY) / SC, { size: 4, color: "#4a2b14" });
+    ctx.font = "bold " + 5 * SC + "px 'Courier New', monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#3a1f0a"; ctx.fillText(label, bx + w / 2, by + h / 2 + 1);
   });
 }
 function drawCustomerAt(c, cx, cy, m, hungry) {      // một khách ở vị trí bất kỳ (ngồi bàn, trên bè, đang đi)
   R("rgba(0,0,0,.25)", cx - 9, cy + 18, 18, 3);
-  const n = kindOf(c) % 4 + 1;                          // 4 khách: chó, mèo, vịt, ếch
-  nameTag(c.name || (qimg("customer/khach_" + n + ".png") ? SPRITE_NAMES[n - 1] : BLOB_NAMES[kindOf(c)]), cx, cy - (qimg("customer/khach_" + n + ".png") ? 14 : 12) - 2, "#fff3c4");
-  const cf = m === "an" ? qframe("customer." + n + ".eat", qnow()) : "customer/khach_" + n + (m === "cho" ? "" : "_" + m) + ".png";
-  if (qimg(cf || "")) {                                 // sprite 24x32, chân ở giữa đáy
-    qput(cf, cx - 12, cy - 12);
-    const em = m === "gian" ? "gian" : m === "vui" ? "vui" : hungry ? "doi" : null;
-    if (em) qput(EMOTE[em], cx + 6, cy - 18);
-    return;
-  }
-  const kind = kindOf(c);
-  if (SPR[kind]) drawBlob(cx, cy, m, SPR[kind]); else drawDog(cx, cy, m, kind);
+  const kind = 2 + hash(String(c.id)) % 3;              // 2 Chiikawa · 3 Hachiware · 4 Usagi (không dùng sprite PNG chó/mèo/vịt/ếch nữa)
+  nameTag(c.name || CUST_NAMES[kind - 2], cx, cy - (kind === 4 ? 21 : 14), "#fff3c4");
+  drawBlob(cx, cy, m, SPR[kind]);
   if (m === "gian") { R(PL.ink, cx - 12, cy - 12, 1, 1); R("#e5493a", cx - 12, cy - 9, 3, 1); R("#e5493a", cx - 11, cy - 11, 1, 3); }
 }
 function drawCustomerPx(c, tb, ratio, t) {           // khách ngồi sau bàn (vẽ trước bàn)
@@ -1752,7 +1745,6 @@ function drawPlayerPx(p, near, t) {
     qput(pf, x - 12, y - 31);
     yy = y - 31;
   } else yy = drawPerson(x, y, pl.face, moving, t, OUT_SEN);
-  nameTag("Út Sen", x, y + 12, "#bfe8d8");                // dưới chân, tránh đè phím E / khay
   if (tray.length) {                                  // khay đang bưng
     const bw = tray.length * 13 + 1, bx = Math.round(x - bw / 2);
     R(PL.ink, bx - 1, yy - 12, bw + 2, 11); R("#fffaf0", bx, yy - 11, bw, 9);
@@ -1877,6 +1869,8 @@ function drawHudLow() {
   if (hudImg) {                                          // khung gỗ 9-slice (lề PNG 16/20/16/20 -> 4/5/4/5 điểm ảnh gốc)
     const [ml, mt, mr, mb] = (AQ.man && AQ.man.hud_slice) || [16, 20, 16, 20], iw = hudImg.naturalWidth, ih = hudImg.naturalHeight;
     const dl = ml / 4, dt = mt / 4, dr = mr / 4, db = mb / 4, H = 24;
+    R(PL.wood2, 0, 0, LW, H);                            // PNG chỉ có viền, ruột trong suốt: lót nền gỗ phía dưới
+    for (let x = 0; x < LW; x += 24) R(PL.wood3, x, dt, 1, H - dt - db);
     g.imageSmoothingEnabled = false;
     const xs = [[0, ml, 0, dl], [ml, iw - ml - mr, dl, LW - dl - dr], [iw - mr, mr, LW - dr, dr]];
     const ys = [[0, mt, 0, dt], [mt, ih - mt - mb, dt, H - dt - db], [ih - mb, mb, H - db, db]];
