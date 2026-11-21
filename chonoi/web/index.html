@@ -642,7 +642,7 @@ async function poll() {
     trackPlayer();
     handleQuanAudio(snap);
   } catch (e) { offline = true; }
-  setTimeout(poll, 16);
+  setTimeout(poll, 33);
 }
 poll();
 
@@ -1761,7 +1761,7 @@ function drawQuanScene(w, h, t) {
 }
 
 // ---------- HUD của bạn (từ mock_quan.html): khung gỗ trên + thanh kho dưới, đọc số từ snapshot ----------
-const KHO_NAME = { ca_loc: "cá lóc", ca_linh: "cá linh", bong_dien_dien: "điên điển", bong_sung: "bông súng", coca: "coca" };
+const KHO_NAME = { ca_keo: "cá kèo", keo_neo: "kèo nèo", ca_loc: "cá lóc", ca_linh: "cá linh", bong_dien_dien: "điên điển", bong_sung: "bông súng", coca: "coca" };
 function toastOf(e) {
   const d = e.data || {};
   switch (e.name) {
@@ -1831,9 +1831,19 @@ function hudText() {
     ptext(Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"), HX + 21, 10, { size: 8, align: "left", color: s <= 20 ? "#ff8a7a" : "#fff2cf" });
     ptext((snap.money ?? 0) + "k", HX + 81, 10, { size: 8, align: "left", color: "#ffe27a" });
     if (snap.day !== undefined) ptext("NGÀY " + snap.day, HX + 128, snap.next_customer_ticks !== undefined ? 6 : 10, { size: 5, color: "#ffe9b0" });
-    if (snap.next_customer_ticks !== undefined) ptext("KHÁCH " + Math.ceil(snap.next_customer_ticks / 60) + "s", HX + 128, 14, { size: 4.5, color: "#e0c58f" });
+    if (snap.next_customer_ticks !== undefined) {
+      ptext("KHÁCH " + Math.ceil(snap.next_customer_ticks / 60) + "s", HX + 128, 14, { size: 4.5, color: "#e0c58f" });
+      const f = Math.max(0, Math.min(1, 1 - snap.next_customer_ticks / (snap.customer_interval_ticks || 900)));   // thanh khách đến (pixel)
+      const bx = (HX + 160) * SC, by = 11 * SC, bw = 52 * SC, bh = 6 * SC, fw = Math.round(bw * f / SC) * SC;
+      ctx.fillStyle = "#241410"; ctx.fillRect(bx - SC, by - SC, bw + 2 * SC, bh + 2 * SC);
+      ctx.fillStyle = "#4a2b14"; ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = f > 0.85 ? "#ffd23f" : "#e8933a"; ctx.fillRect(bx, by, fw, bh);
+      ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(bx, by, fw, SC);
+    }
     ptext("ĐIỂM " + (snap.score ?? 0), HX + 224, 10, { size: 7, align: "left", color: "#fff2cf" });
-    const kho = Object.keys(stock).map((k) => (KHO_NAME[k] || k) + " " + stock[k]).join(" · ");
+    const fr = snap.fresh;   // Mùa Nước Nổi: số cá thể chưa ươn, độ tươi trung bình, số ươn theo loại
+    const kho = fr ? Object.keys(fr).filter((k) => fr[k].n || fr[k].spoiled).map((k) => (KHO_NAME[k] || k) + " " + fr[k].n + (fr[k].n ? " " + Math.round(fr[k].avg) + "%" : "") + (fr[k].spoiled ? " (ươn " + fr[k].spoiled + ")" : "")).join(" · ")
+      : Object.keys(stock).map((k) => (KHO_NAME[k] || k) + " " + stock[k]).join(" · ");
     ptext("KHO  " + (kho || "(trống — bấm ông Hai để mua)"), HX + 6, LH - 7, { size: 4.4, align: "left", color: "#ffe9b0", bold: true });
     const seen = new Set(), msgs = [];
     (snap.events || []).forEach((e) => { const m = e.tick >= (snap.tick || 0) - 150 ? toastOf(e) : null, k = e.tick + e.name; if (m && !seen.has(k)) { seen.add(k); msgs.push([m, e.tick]); } });
