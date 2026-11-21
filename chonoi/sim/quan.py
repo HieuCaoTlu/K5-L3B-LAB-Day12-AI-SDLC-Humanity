@@ -588,7 +588,10 @@ class QuanSim:
     def _use_stove(self, e, events):
         if e["state"] == "idle":
             self._try_start(e, events)
-        elif e["state"] == "ready" and len(self.tray) < self.carry_limit:
+            if e["state"] == "cooking" and self.menu[e["dish"]].get("instant"):   # món lấy liền (coca): xong ngay, khỏi đợi
+                e.update(state="ready", cook_ticks_left=0)
+                events.append(("dish_ready", {"stove_id": e["id"], "dish_id": e["dish"]}))
+        if e["state"] == "ready" and len(self.tray) < self.carry_limit:
             if not e["jobs"]:  # bếp dựng sẵn từ scenario, không rõ cho khách nào
                 self.tray.append({"dish_id": e["dish"], "customer_id": None, "order": None})
                 events.append(("dish_picked", {"stove_id": e["id"], "dish_id": e["dish"]}))

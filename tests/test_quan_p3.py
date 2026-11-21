@@ -241,5 +241,19 @@ class FlexServe(unittest.TestCase):
         self.assertEqual(step(s, 1, ("interact",)), [])                          # core: món chỉ đưa đúng khách đã nấu cho
 
 
+class InstantDish(unittest.TestCase):
+    def test_instant_dish_picked_with_single_press(self):
+        tun = copy.deepcopy(T12)
+        tun["menu"]["coca"] = {"recipe": {"coca": 1}, "cook_s": 1, "price": 20, "instant": True}
+        tun["quan"]["stoves"][0]["serves"] = "coca"
+        s = session([item("I1", "coca", 100)], [cust("C1", "T1", dish="coca", order_tick=1)], tuning=tun)
+        sim = s.sim
+        sim.pos = list(sim.stoves[0]["pos"])
+        rows = step(s, 1, ("interact",))
+        self.assertEqual([e["name"] for e in rows], ["cook_started", "dish_ready", "dish_picked"])
+        self.assertEqual([t["dish_id"] for t in sim.tray], ["coca"])
+        self.assertEqual(sim.stoves[0]["state"], "idle")
+
+
 if __name__ == "__main__":
     unittest.main()
