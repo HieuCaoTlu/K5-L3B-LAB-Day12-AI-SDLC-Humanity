@@ -22,6 +22,7 @@
 
 ## Quy tắc làm việc với agent
 - Mỗi agent một việc rõ ràng (một lát). Cho agent đọc PRD/ticket đúng phase và hợp đồng kho trước.
+  PRD Phase 1 + Test Contract v1.0: `docs/plan/PRD-0.md` (luật từng bước ở mục F, sự kiện ở mục E, kho ở mục G).
 - Agent làm xong phải chạy test và ghi kết quả vào mô tả commit hoặc `docs/proof/`; người đọc lại thay đổi trước khi đẩy.
 - Sáng tạo thêm được khuyến khích nhưng phải tắt ở headless (xem README, mục "Tự do sáng tạo").
 
