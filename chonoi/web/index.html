@@ -1627,7 +1627,7 @@ function layer(name, key, fn) {
   if (L.key !== key) { L.cv.width = LW; L.cv.height = LH; const prev = g; g = L.cv.getContext("2d"); fn(); g = prev; L.key = key; }
   g.drawImage(L.cv, 0, 0);
 }
-let GX = 16, GZ = 10, LW = 288, LH = 214, SC = 3, OX = 0, OY = 0, ov = [];
+let GX = 16, GZ = 10, LW = 288, LH = 214, SC = 3, OX = 0, OY = 0, ov = [], tips = [];
 const lx = (x) => Math.round(MX + x * U), lz = (z) => Math.round(MY + (GZ - z) * U);
 function R(c, x, y, w, h) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); }
 function pxl(c, x, y) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), 1, 1); }
@@ -2284,6 +2284,7 @@ function drawQuanScene(w, h, t) {
     }
   });
   drawHudLow(); hudText();
+  tips.forEach((f) => ov.push(f));                      // tooltip nút vẽ cuối cùng, nằm trên cả tranh kết ca
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(lo, 0, 0, LW, LH, 0, 0, LW * SC, LH * SC);
   ov.forEach((f) => f());
@@ -2350,6 +2351,7 @@ function drawHudLow() {
     { id: "new", label: "Chơi lại từ đầu", on: snap.day !== undefined },
   ].filter((b) => b.on);
   BTNS.length = 0;
+  tips = [];
   list.forEach((b, i) => {
     const x = HX + 288 - 6 - (list.length - i) * 15 + 1, y = LH - 13, enabled = b.enabled !== false;
     const hover = enabled && MOUSE.x >= x && MOUSE.x < x + 13 && MOUSE.y >= y && MOUSE.y < y + 12, down = hover && MOUSE.down;
@@ -2358,7 +2360,7 @@ function drawHudLow() {
     R(enabled ? (hover ? "#d9a45e" : "#b9824a") : "#6e5a44", x + 1, y + 1, 11, 10);
     R(enabled ? "#f0c488" : "#8a7458", x + 1, y + 1, 11, 1); R(PL.wood3, x + 1, y + 10, 11, 1);                                                    // viền sáng / tối
     drawIcon(HUD_ICONS[b.icon || b.id], x + 2, y + 2 + (down ? 1 : 0), enabled ? "#fff2cf" : "#a8957a");
-    if (hover) ov.push(() => {
+    if (hover) tips.push(() => {
       ctx.font = "bold " + 5 * SC + "px 'Courier New', monospace";
       const tw = ctx.measureText(b.label).width + 6 * SC, tx = Math.min(LW * SC - tw - 2, Math.max(2, (x + 6) * SC - tw / 2)), ty = (y - 12) * SC;
       ctx.fillStyle = "#1a0e06"; ctx.fillRect(tx - SC, ty - SC, tw + 2 * SC, 10 * SC); ctx.fillStyle = "#fff6d8"; ctx.fillRect(tx, ty, tw, 8 * SC);
