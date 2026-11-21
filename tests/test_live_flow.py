@@ -66,6 +66,22 @@ class LiveDayFlow(unittest.TestCase):
         g.restart(new_game=True)
         self.assertEqual(self.snap(g)["player"]["oxygen_max_ticks"], 30 * 60)
 
+    def test_title_screen_pauses_until_start(self):
+        t = load_contract()["tuning"]
+        g = LiveGame("quan", t, load_scenario(None, "quan", t), 1, extras=True, start_phase="gather", start_paused=True)
+        self.assertTrue(self.snap(g)["paused"])
+        for _ in range(30):
+            g._tick_once()
+        self.assertEqual(g.session.tick, 0)            # màn hình chờ: sim đứng yên
+        g.set_paused(False)
+        self.assertFalse(self.snap(g)["paused"])
+        for _ in range(30):
+            g._tick_once()
+        self.assertEqual(g.session.tick, 30)
+
+    def test_default_not_paused(self):
+        self.assertFalse(self.snap(self.make("quan"))["paused"])
+
 
 if __name__ == "__main__":
     unittest.main()

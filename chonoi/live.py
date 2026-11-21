@@ -72,8 +72,9 @@ class LiveGame:
     """Một lượt chơi + luồng nền bước 60 tick/s. Mọi truy cập trạng thái đi qua khóa."""
 
     def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None, debug_stock=False,
-                 extras=False, day=1, start_phase="quan"):
+                 extras=False, day=1, start_phase="quan", start_paused=False):
         self.debug_stock = debug_stock
+        self.paused = bool(start_paused)  # màn hình chờ: sim đứng yên tới khi người chơi bấm "Bắt đầu"
         self._start_phase = start_phase  # "gather": bắt đầu ngày từ buổi sáng (--mode day); "quan": từ quán
         self.extras = bool(extras) and mode == "quan"  # phần sáng tạo: nhiều ngày, 6 bàn, ông bán hàng... (xem extras.py)
         self.mode = mode
@@ -155,7 +156,15 @@ class LiveGame:
             elif delay < -0.25:  # chạy chậm quá thì bỏ bù, tránh chạy dồn
                 nxt = time.perf_counter()
 
+    def set_paused(self, flag):
+        with self._lock:
+            if self.paused != flag:
+                self.paused = flag
+                self._ver += 1
+
     def _tick_once(self):
+        if self.paused:
+            return
         s = self.session
         if s.done:
             if self.extras and self.mode == "gather" and not self.error and s.sim.reason != "error":
@@ -193,6 +202,7 @@ class LiveGame:
             snap["finished"] = self.session.done
             snap["reason"] = self.session.sim.reason if self.session.done else None
             snap["error"] = self.error
+            snap["paused"] = self.paused
             if self.extras:
                 snap["day"] = self._carry["day"]
                 if self.mode == "gather":
@@ -369,6 +379,11 @@ class _Handler(BaseHTTPRequestHandler):
                 if not isinstance(body, dict) or not isinstance(body.get("item"), str):
                     raise ValueError("body phải có item (chuỗi)")
                 self.game.buy(body["item"])
+            elif path == "/pause":
+                body = json.loads(raw.decode("utf-8") or "{}")
+                if not isinstance(body, dict) or not isinstance(body.get("paused"), bool):
+                    raise ValueError("body phải có paused (boolean)")
+                self.game.set_paused(body["paused"])
             elif path == "/dive":
                 body = json.loads(raw.decode("utf-8") or "{}")
                 if not isinstance(body, dict) or not isinstance(body.get("key"), str):
@@ -456,7 +471,7 @@ def main(argv=None) -> int:
             raise BadInput("vừa có quan.stock vừa có --inventory")
         game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, a.debug_stock,
                         extras=(a.mode == "quan" and not a.classic), day=max(1, a.day),
-                        start_phase="gather" if day_flow else "quan")
+                        start_phase="gather" if day_flow else "quan", start_paused=True)
         server = LiveServer(game, a.host, a.port)
     except BadInput as e:
         sys.stderr.write(f"đầu vào sai: {e}\n")

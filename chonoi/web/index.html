@@ -37,6 +37,18 @@
   .pxb:active:not(:disabled) { transform: translateY(3px); box-shadow: inset -3px -3px 0 #c79a1d, inset 3px 3px 0 #fff0a8; }
   .pxb:disabled { background: #a39478; color: #6b5d44; box-shadow: inset 3px 3px 0 #bdb093, 0 4px 0 #241410; cursor: not-allowed; }
   .pxb.sm { padding: 7px 14px; } .pxb.wide { display: block; width: 100%; margin-top: 12px; }
+  #title { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+    background: linear-gradient(#f6c36b 0%, #f08a4b 38%, #2d6a8f 38%, #0c2f4a 100%); }
+  #title .pxm { width: min(640px, 100%); text-align: center; border: 4px solid #241410; box-shadow: 0 6px 0 rgba(0,0,0,.45); }
+  #title h1 { margin: 0; font-size: 34px; letter-spacing: 2px; color: #ffe27a; text-shadow: 3px 3px 0 #241410; }
+  #title .sub { margin: 4px 0 14px; font-size: 16px; font-weight: normal; color: #f1dfb0; }
+  #title .story { text-align: left; margin: 0 0 16px; }
+  #title .story p { margin: 8px 0; padding: 8px 12px; background: rgba(36,20,16,.4); border-left: 4px solid #ffd54f; font-size: 17px; opacity: 0; animation: tin .6s ease forwards; }
+  #title .story p:nth-child(1) { animation-delay: .3s; } #title .story p:nth-child(2) { animation-delay: 1.5s; } #title .story p:nth-child(3) { animation-delay: 2.7s; }
+  #title .pxb { min-width: 220px; font-size: 20px; animation: tblink 1.2s steps(2) infinite; }
+  #title .keys { margin-top: 10px; font-size: 13px; font-weight: normal; color: #d9c08a; }
+  @keyframes tin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes tblink { 50% { filter: brightness(1.2); } }
   #rules { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); width: min(680px, 94vw); z-index: 9; display: none; }
   #rules .pxb { display: block; margin: 6px auto 0; min-width: 180px; }
   #shop { position: fixed; right: 16px; top: 64px; width: min(380px, 94vw); z-index: 7; display: none; }
@@ -69,6 +81,19 @@
   <div style="display:flex;gap:6px;justify-content:space-between">
     <button id="btnAudioTest">🔔 Thử chuông</button>
     <button id="btnAudioClose">Đóng</button>
+  </div>
+</div>
+<div id="title">
+  <div class="pxm">
+    <h1>ÚT SEN</h1>
+    <div class="sub">MÙA NƯỚC NỔI</div>
+    <div class="story">
+      <p>Nước nổi tràn đồng. Quán của Má Tư vắng khách, nồi trống, bếp nguội.</p>
+      <p>Út Sen hứa với Má: sáng lặn hái bông, bắt cá — nhớ giữ cho tươi, coi chừng Cá Sấu!</p>
+      <p>Tối mở quán đãi khách. Năm ngày nước nổi, giữ cho được quán của Má.</p>
+    </div>
+    <button class="pxb" id="titleStart">BẮT ĐẦU (Enter)</button>
+    <div class="keys">WASD / mũi tên: di chuyển · E: tương tác · Space: bắt cá · M: tắt nhạc</div>
   </div>
 </div>
 <div id="rules" class="pxm"></div>
@@ -995,6 +1020,28 @@ addEventListener("keyup", (e) => {
 });
 addEventListener("blur", () => { down.clear(); pushInput(); });
 
+// ---------- màn hình chờ: cốt truyện ngắn, sim tạm dừng tới khi bấm Bắt đầu ----------
+let titleSeen = false, titleOn = false;
+const titleEl = document.getElementById("title");
+function showTitle(on) {
+  titleOn = on;
+  titleEl.style.display = on ? "flex" : "none";
+  if (on) down.clear();
+}
+function startGame() {
+  if (!titleOn) return;
+  if (window.QuanAudio) window.QuanAudio.unlock();
+  if (window.GatherAudio && window.GatherAudio.unlock) window.GatherAudio.unlock();
+  fetch("/pause", { method: "POST", body: JSON.stringify({ paused: false }), headers: { "Content-Type": "application/json" } });
+  showTitle(false);
+}
+document.getElementById("titleStart").onclick = startGame;
+addEventListener("keydown", (e) => {
+  if (!titleOn) return;
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopImmediatePropagation(); startGame(); }
+  else if (e.key.toLowerCase() !== "m") e.stopImmediatePropagation();   // chưa vào game: phím chơi không có tác dụng
+}, true);
+
 // ---------- ra: poll snapshot ----------
 async function poll() {
   try {
@@ -1003,7 +1050,8 @@ async function poll() {
     offline = false;
     trackPlayer();
     handleQuanAudio(snap);
-    if (window.GatherAudio) window.GatherAudio.setActive(snap.mode === "gather" && !snap.error);
+    if (window.GatherAudio) window.GatherAudio.setActive(snap.mode === "gather" && !snap.error && !titleOn);
+    if (!titleSeen) { titleSeen = true; if (snap.paused) showTitle(true); }
   } catch (e) { offline = true; }
   setTimeout(poll, 33);
 }
