@@ -79,7 +79,11 @@ class Session:
 
 
 def run(mode, tuning, scenario, seed, frames, ticks, out_path, snapshot_every, inventory=None, inventory_out=None):
-    sess = Session(mode, tuning, scenario, seed, inventory)
+    if mode == "day":
+        from .day import DaySession
+        sess = DaySession(tuning, seed)
+    else:
+        sess = Session(mode, tuning, scenario, seed, inventory)
     player = InputPlayer(frames)
     w = JsonlWriter(out_path)
     try:

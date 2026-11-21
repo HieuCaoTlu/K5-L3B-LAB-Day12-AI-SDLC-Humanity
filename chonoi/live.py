@@ -14,6 +14,7 @@ Ngẫu nhiên vẫn đi qua `Streams` (seed); chỉ nhịp chạy theo đồng h
 
 import argparse
 import json
+import math
 import os
 import sys
 import threading
@@ -34,6 +35,9 @@ WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 TICK_S = 1.0 / 60.0
 MAX_BODY = 4096
 RECENT_EVENTS = 40
+DIVE_SHOP = {"pos": [7, 0], "radius": 5}   # Tiệm đồ lặn: bên cạnh bến (bến ở x=2), phần sáng tạo của live
+DIVE_FIELDS = {"oxygen": "oxygen_max_s", "hp": "hp_max"}
+DIVE_ITEMS = (("oxygen", "Bình oxy", "Oxy tối đa {cur} s → {nxt} s"), ("hp", "Áo phao", "Máu tối đa {cur} → {nxt}"))
 _ASSET_TYPES = {".png": "image/png", ".wav": "audio/wav", ".json": "application/json", ".gif": "image/gif"}
 
 
@@ -91,7 +95,7 @@ class LiveGame:
 
     def _new_carry(self):
         """Trạng thái đầu ngày (nhiều ngày: tiền, kho, uy tín chuyển sang ngày sau)."""
-        self._carry = {"day": self._start_day, "money": START_MONEY, "stock": _clone_stock(self._inventory), "rep": None, "upgrades": {},
+        self._carry = {"day": self._start_day, "money": START_MONEY, "stock": _clone_stock(self._inventory), "rep": None, "upgrades": {}, "dive": {"oxygen": 0, "hp": 0},
                        "phase": self._start_phase}   # chu kỳ ngày: bắt đầu ở quán (hoặc buổi sáng với --mode day); sang ngày mới thì bắt cá (gather) rồi tự sang quán
 
     def _reset(self):
@@ -100,6 +104,10 @@ class LiveGame:
             self.mode = c.get("phase", "quan")
             self.tuning = build_tuning(self.base_tuning, c["day"], c["money"])
             if self.mode == "gather":
+                for key, field in DIVE_FIELDS.items():   # Tiệm đồ lặn: bậc đã mua có hiệu lực từ buổi sáng này
+                    lv = c.get("dive", {}).get(key, 0)
+                    if lv:
+                        self.tuning["gather"][field] = self.base_tuning["shop"]["upgrades"][key][lv - 1][field]
                 self._args = ("gather", self.tuning, {"day": c["day"]}, self._seed + c["day"] - 1, None)
             else:
                 scen = dict(self._scenario)
@@ -187,6 +195,11 @@ class LiveGame:
             snap["error"] = self.error
             if self.extras:
                 snap["day"] = self._carry["day"]
+                if self.mode == "gather":
+                    snap["money"] = self._carry["money"]   # buổi sáng không kiếm tiền, hiện số tiền đang có để HUD / Tiệm
+                if self.mode == "gather":
+                    snap["dive"] = self._dive_list()
+                    snap["dive_shop"] = dict(DIVE_SHOP, open=self._at_dive_shop())
             body = json.dumps(snap, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
             self._cache = (self._ver, body)
             return body
@@ -214,7 +227,7 @@ class LiveGame:
                 if new_game:
                     self._new_carry()
                 elif next_day and self.mode == "quan" and self.session.done and sim.reason == "time":
-                    self._carry = {"day": self._carry["day"] + 1, "money": sim.money,   # sang ngày kế: bắt cá trước, rồi tự sang quán
+                    self._carry = {"day": self._carry["day"] + 1, "money": sim.money, "dive": dict(self._carry.get("dive", {})),   # sang ngày kế: bắt cá trước, rồi tự sang quán
                                    "stock": sim.carry_items(), "rep": sim.reputation,
                                    "upgrades": dict(sim.up), "phase": "gather"}
             self._reset()
@@ -227,6 +240,58 @@ class LiveGame:
                 raise ValueError("không nâng cấp được mục này")
             self.events.append({"type": "event", "tick": self.session.tick, "phase": self.session.sim.phase,
                                 "name": ev[0], "data": ev[1]})
+            del self.events[:-RECENT_EVENTS]
+            self._ver += 1
+
+    def _dive_list(self):
+        lv = self._carry.get("dive", {})
+        out = []
+        for key, name, desc in DIVE_ITEMS:
+            tiers = self.base_tuning["shop"]["upgrades"][key]
+            n = lv.get(key, 0)
+            field = DIVE_FIELDS[key]
+            nxt = tiers[n] if n < len(tiers) else None
+            out.append({"key": key, "name": name, "icon": "clock" if key == "oxygen" else "heart", "level": n, "max": len(tiers),
+                        "next_cost": nxt["price"] if nxt else None,
+                        "desc": desc.format(cur=(tiers[n - 1][field] if n else self.base_tuning["gather"][field]),
+                                            nxt=(nxt[field] if nxt else "-"))})
+        return out
+
+    def _at_dive_shop(self):
+        sim = self.session.sim
+        if not (self.extras and self.mode == "gather") or self.session.done:
+            return False
+        t = sim.t
+        return sim.pos[1] <= t["surface_depth"] and math.dist(sim.pos, DIVE_SHOP["pos"]) <= DIVE_SHOP["radius"]
+
+    def dive_buy(self, key):
+        """Tiệm đồ lặn cạnh bến (buổi sáng, đang nổi gần tiệm): mua bình oxy / áo phao, có hiệu lực ngay cho lần lặn này."""
+        with self._lock:
+            if not self._at_dive_shop():
+                raise ValueError("phải ở mặt nước gần Tiệm đồ lặn (cạnh bến)")
+            tiers = self.base_tuning["shop"]["upgrades"].get(key)
+            lv = self._carry.setdefault("dive", {"oxygen": 0, "hp": 0})
+            if tiers is None or key not in DIVE_FIELDS:
+                raise ValueError("không có món này")
+            n = lv.get(key, 0)
+            if n >= len(tiers):
+                raise ValueError("đã mua tối đa")
+            price = tiers[n]["price"]
+            if self._carry["money"] < price:
+                raise ValueError("không đủ tiền")
+            self._carry["money"] -= price
+            lv[key] = n + 1
+            sim, field = self.session.sim, DIVE_FIELDS[key]
+            old = sim.t[field]
+            sim.t[field] = tiers[n][field]
+            if key == "oxygen":
+                gain = int(round((tiers[n][field] - old) * 60))
+                sim.oxygen_max += gain
+                sim.oxygen_ticks += gain
+            else:
+                sim.hp += tiers[n][field] - old
+            self.events.append({"type": "event", "tick": self.session.tick, "phase": "gather", "name": "shop_buy",
+                                "data": {"item": key, "level": n + 1, "price": price, "money": self._carry["money"]}})
             del self.events[:-RECENT_EVENTS]
             self._ver += 1
 
@@ -304,6 +369,11 @@ class _Handler(BaseHTTPRequestHandler):
                 if not isinstance(body, dict) or not isinstance(body.get("item"), str):
                     raise ValueError("body phải có item (chuỗi)")
                 self.game.buy(body["item"])
+            elif path == "/dive":
+                body = json.loads(raw.decode("utf-8") or "{}")
+                if not isinstance(body, dict) or not isinstance(body.get("key"), str):
+                    raise ValueError("body phải có key (chuỗi)")
+                self.game.dive_buy(body["key"])
             elif path == "/upgrade":
                 body = json.loads(raw.decode("utf-8") or "{}")
                 if not isinstance(body, dict) or not isinstance(body.get("key"), str):

@@ -5,6 +5,7 @@
 ## Lệnh
 - Test: `PYTHONPATH=tests:. python3 -m unittest discover -s tests -v`
 - Headless: `python3 -m chonoi.headless --mode gather|quan --seed 1 --ticks 600 --out out.jsonl`
+- Headless 5 ngày: `python3 -m chonoi.headless --mode day --seed 1 --ticks 108000 --out day.jsonl` (`chonoi/day.py`, giả định ở `docs/clarify.md` D1–D5)
 - Chơi thử trên trình duyệt: `python3 -m chonoi.live --mode gather|quan` (mở địa chỉ in ra; WASD, E, Space, R)
 - Chơi liền mạch sáng -> tối -> ngày sau trong một tab: `python3 -m chonoi.live --mode day` (hết buổi sáng tự sang quán; hết ca: Enter / nút ▶ sang ngày kế)
 

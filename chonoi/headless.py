@@ -45,7 +45,8 @@ def main(argv=None) -> int:
     a = p.parse_args(argv)
     try:
         if a.mode == "day":
-            raise BadInput("--mode day chưa hỗ trợ ở contract v1.0 (có từ v1.1)")
+            if a.scenario or a.inventory or a.inventory_out:
+                raise BadInput("--mode day không nhận --scenario/--inventory/--inventory-out")
         if a.ticks < 0:
             raise BadInput("--ticks phải >= 0")
         if a.snapshot_every <= 0:
@@ -61,7 +62,7 @@ def main(argv=None) -> int:
             raise BadInput("các đường dẫn đầu vào/đầu ra phải khác nhau")
         contract = load_contract()
         tuning = contract["tuning"]
-        scenario = load_scenario(a.scenario, a.mode, tuning)
+        scenario = {} if a.mode == "day" else load_scenario(a.scenario, a.mode, tuning)
         frames = load_frames(a.inputs)
         inventory = read_inventory(a.inventory, fresh="freshness" in tuning) if a.inventory else None
         if inventory is not None and "stock" in scenario:

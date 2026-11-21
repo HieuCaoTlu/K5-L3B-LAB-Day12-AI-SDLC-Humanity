@@ -1603,6 +1603,11 @@ function gatherHudTop(w, p, t) {
   htext(p.at_surface ? "MẶT NƯỚC" : "SÂU " + depth.toFixed(1) + " m", 580, 28, { size: 16, color: p.at_surface ? "#fff0b0" : "#bfe9ff" });
   if (p.catch_cd_ticks > 0) htext("BẮT " + (p.catch_cd_ticks / 60).toFixed(1) + "s", 760, 28, { size: 14, color: "#e0c58f" });
   if (snap.day !== undefined) htext("NGÀY " + snap.day, 880, 28, { size: 16, color: GC.gold });
+  if (snap.day !== undefined) {   // tiền mang từ ngày trước: thẻ nhỏ dưới thanh trên, góc trái (không đè bản đồ nhỏ)
+    const txt = "$ " + (snap.money ?? 0) + "k";
+    ctx.fillStyle = "rgba(20,10,4,.7)"; ctx.fillRect(10, 62, 24 + txt.length * 11, 28);
+    htext(txt, 20, 77, { size: 18, color: GC.gold });
+  }
 }
 
 // ---------- camera bám theo Út Sen (kiểu game lặn cuộn ngang) + bản đồ nhỏ ----------
@@ -1801,6 +1806,7 @@ function gatherHint(p, meta) {
     if (snap.dock_capacity !== undefined) return ["E · cất giỏ vào bến (" + (snap.dock_count || 0) + "/" + snap.dock_capacity + ") · Q kết thúc", GC.gold];
     return ["E · cập bến (kết thúc buổi)", GC.gold];
   }
+  if (snap.dive_shop && snap.dive_shop.open) return ["Bấm vào Tiệm đồ lặn để mua bình oxy / áo phao", "#ffe27a"];
   const near = (snap.nodes || []).filter((q) => d(q.pos) <= (meta.interact_radius || 2)).sort((a, b) => d(a.pos) - d(b.pos))[0];
   if (near) return near.ready !== false ? ["E · hái " + (KIND_NAME[near.kind] || near.kind), "#fff3b0"] : ["Chưa nở (" + Math.ceil((near.regrow_ticks || 0) / 60) + "s)", "#e0c58f"];
   return null;
@@ -1858,6 +1864,17 @@ function drawGather(w, h) {
   const dp = meta.dock_pos || [2, 0], dr = meta.dock_radius || 3;
   ctx.strokeStyle = "rgba(255,230,150,.55)"; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.arc(sx(dp[0]), sy(dp[1]), dr * s, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   text("Bến (E)", sx(dp[0]), sy(-4.6), { size: 11, align: "center", color: "#3d2a14" });
+  diveHit = null;
+  if (snap.dive_shop) {   // Tiệm đồ lặn bên cạnh bến: quầy gỗ + mái vải; bấm vào khi đang nổi gần đó
+    const ds = snap.dive_shop, X0 = sx(ds.pos[0]), Y0 = sy(-0.2), W = 3.4 * s, H = 2.6 * s, near = ds.open;
+    ctx.fillStyle = "#6b4423"; ctx.fillRect(X0 - W / 2, Y0 - H * 0.55, W, H * 0.55);
+    ctx.fillStyle = "#8a5a2e"; ctx.fillRect(X0 - W / 2, Y0 - H * 0.55, W, H * 0.12);
+    ctx.fillStyle = near ? "#ffd23f" : "#e0a82e"; ctx.fillRect(X0 - W / 2 - 0.2 * s, Y0 - H, W + 0.4 * s, H * 0.3);
+    ctx.fillStyle = "#c0392b"; for (let i = 0; i < 4; i += 2) ctx.fillRect(X0 - W / 2 - 0.2 * s + i * (W + 0.4 * s) / 4, Y0 - H, (W + 0.4 * s) / 4, H * 0.3);
+    ctx.fillStyle = "#4a2f17"; ctx.fillRect(X0 - W / 2, Y0 - H, 0.25 * s, H); ctx.fillRect(X0 + W / 2 - 0.25 * s, Y0 - H, 0.25 * s, H);
+    text("Tiệm đồ lặn", X0, Y0 - H - 0.5 * s, { size: 11, align: "center", color: "#3d2a14" });
+    diveHit = { x: X0 - W / 2 - 0.3 * s, y: Y0 - H - 0.2 * s, w: W + 0.6 * s, h: H + 0.3 * s };
+  }
   // cây hái trên mặt nước
   (snap.nodes || []).forEach((n) => {
     const ready = n.ready !== false, x = sx(n.pos[0]), y = sy(n.pos[1]) + Math.sin(t * 2 + n.pos[0]) * 0.08 * s;
@@ -1995,7 +2012,7 @@ const ING = { ca_loc: { k: "fish_g", n: "cá lóc" }, ca_linh: { k: "fish_b", n:
 const DISH = { ca_loc_nuong_trui: { k: "dish_fish", n: "cá lóc nướng trui" }, goi_bong_sung: { k: "dish_salad", n: "gỏi bông súng" },
   lau_ca_linh_dien_dien: { k: "dish_hotpot", n: "lẩu cá linh" }, canh_chua_ca_loc: { k: "dish_soup", n: "canh chua cá lóc" },
   ca_keo_nuong: { k: "fish_keo", n: "cá kèo nướng" }, lau_mam: { k: "dish_hotpot2", n: "lẩu mắm" }, coca: { k: "coca", n: "coca" } };
-let vendorHit = null, playerHit = null, shopOpen = false, shopSig = "", upgOpen = false, upgSig = "";
+let vendorHit = null, playerHit = null, shopOpen = false, shopSig = "", upgOpen = false, upgSig = "", diveOpen = false, diveSig = "", diveHit = null;
 
 function hash(str) { let h = 7; for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; }
 function rrect(x, y, w, h, r) {
@@ -2833,6 +2850,7 @@ function hudText() {
 function drawQuan(w, h) {
   drawQuanScene(w, h, snap.tick || 0);
   updateShop();
+  updateDive();
   updateUpg();
 }
 
@@ -2911,6 +2929,44 @@ cv.addEventListener("click", (e) => { if (hitPlayer(e)) { playUiClick(); toggleU
 cv.addEventListener("mousemove", (e) => { if (hitPlayer(e)) cv.style.cursor = "pointer"; });
 addEventListener("keydown", (e) => { if (e.key === "Escape") { upgOpen = false; updateUpg(); } });
 
+// ---------- Tiệm đồ lặn (mở sau ca tối: bình oxy, áo phao) ----------
+const diveEl = document.createElement("div");
+diveEl.id = "divep"; diveEl.className = "pxm";
+diveEl.style.cssText = "position:fixed;right:16px;top:64px;width:min(380px,94vw);z-index:7;display:none";
+document.body.appendChild(diveEl);
+function updateDive() {
+  const list = snap && snap.dive;
+  if (!list || !diveOpen || !snap.dive_shop || !snap.dive_shop.open) { diveEl.style.display = "none"; return; }
+  const money = snap.money ?? 0;
+  const sig = JSON.stringify([money, list.map((u) => u.level)]);
+  diveEl.style.display = "block";
+  if (sig === diveSig) return;
+  diveSig = sig;
+  let html = `<div class="pxh">${icon("boat", 32)} TIỆM ĐỒ LẶN</div><div class="pxs">Mua xong dùng ngay cho lần lặn này.</div><div class="pxrow">${icon("coin", 26)} Bạn có <b>${money}k</b></div>`;
+  list.forEach((u) => {
+    const maxed = u.next_cost === null, can = !maxed && money >= u.next_cost;
+    let pips = ""; for (let i = 0; i < u.max; i++) pips += `<span class="pip${i < u.level ? " on" : ""}"></span>`;
+    html += `<div class="pxcard"><div>${icon(u.icon, 30)} <b>${u.name}</b> <span class="pips">${pips}</span></div><div class="pxs">${u.desc}</div>` +
+      `<button class="pxb sm" data-k="${u.key}" ${can ? "" : "disabled"}>${maxed ? "Tối đa" : "Mua - " + u.next_cost + "k"}</button></div>`;
+  });
+  html += `<button class="pxb wide" data-close="1">Đóng (Esc)</button>`;
+  diveEl.innerHTML = html;
+}
+diveEl.addEventListener("click", (e) => {
+  const d = e.target.closest("button");
+  if (!d) return;
+  if (d.dataset.close) { diveOpen = false; updateDive(); return; }
+  if (d.dataset.k) { fetch("/dive", { method: "POST", body: JSON.stringify({ key: d.dataset.k }), headers: { "Content-Type": "application/json" } }); diveSig = ""; }
+});
+addEventListener("keydown", (e) => { if (e.key === "Escape") { diveOpen = false; updateDive(); } });
+function hitDive(e) {
+  if (!diveHit || !snap || snap.mode !== "gather") return false;
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  return x >= diveHit.x && x <= diveHit.x + diveHit.w && y >= diveHit.y && y <= diveHit.y + diveHit.h;
+}
+cv.addEventListener("click", (e) => { if (hitDive(e) && snap.dive_shop && snap.dive_shop.open) { playUiClick(); diveOpen = !diveOpen; diveSig = ""; updateDive(); } });
+cv.addEventListener("mousemove", (e) => { if (hitDive(e)) cv.style.cursor = "pointer"; });
+
 // ---------- thanh menu + luật chơi (pixel) ----------
 const RULES = {
   quan: `<div class="pxh">${icon("book", 32)} LUẬT CHƠI - BUỔI TỐI</div>
@@ -2936,7 +2992,7 @@ function showRules(on) {
 function postRestart(body) {
   playUiClick();
   fetch("/restart", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
-  lastSent = ""; down.clear(); shopOpen = false; upgOpen = false;
+  lastSent = ""; down.clear(); shopOpen = false; upgOpen = false; diveOpen = false;
   audioRun.prevSigs = []; audioRun.custMoods = {}; audioRun.prevFinished = false;
 }
 document.getElementById("btnRules").onclick = () => { playUiClick(); showRules(rulesEl.style.display !== "block"); };

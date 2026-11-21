@@ -44,6 +44,21 @@ def session(stock, customers=(), tuning=T12, **extra):
     return Session("quan", tuning, sc, 1)
 
 
+
+def _jload(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _jline(path):
+    with open(path, encoding="utf-8") as f:
+        return json.loads(f.readline())
+
+
+def _jdump(obj, path):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f)
+
 class FreshInventoryFile(unittest.TestCase):
     def write(self, obj):
         d = tempfile.mkdtemp()
@@ -80,12 +95,12 @@ class FreshInventoryFile(unittest.TestCase):
         p = os.path.join(d, "o.json")
         write_inventory_items(p, [{"id": "I10", "kind": "ca_loc", "fresh": Fraction(7199, 240)},
                                   {"id": "I2", "kind": "ca_linh", "fresh": Fraction(100)}])
-        data = json.load(open(p, encoding="utf-8"))
+        data = _jload(p)
         self.assertEqual([x["id"] for x in data["items"]], ["I2", "I10"])        # I2 trước I10
         back = read_inventory(p, fresh=True)
         self.assertLess(back[1]["fresh"], 30)                                      # 29.995833 vẫn < 30 sau khi đọc lại
         write_inventory_items(p, [])
-        self.assertEqual(json.load(open(p, encoding="utf-8")), {"items": []})
+        self.assertEqual(_jload(p), {"items": []})
 
     def test_headless_run_snapshot_matches_file_at_tick0(self):
         items = [item("I1", "ca_linh", 100), item("I3", "ca_loc", 97.5), item("I2", "bong_sung", 61.25)]
@@ -93,7 +108,7 @@ class FreshInventoryFile(unittest.TestCase):
         inv, out = os.path.join(d, "k.json"), os.path.join(d, "q.jsonl")
         write_inventory_items(inv, [{**x, "fresh": Fraction(str(x["fresh"]))} for x in items])
         run("quan", T12, {}, 1, [], 0, out, 10, inventory=read_inventory(inv, fresh=True))
-        snap = json.loads(open(out, encoding="utf-8").readline())
+        snap = _jline(out)
         self.assertEqual(snap["stock"], [item("I1", "ca_linh", 100.0), item("I2", "bong_sung", 61.25), item("I3", "ca_loc", 97.5)])
 
 
@@ -200,10 +215,10 @@ class FreshRules(unittest.TestCase):
     def test_scenario_count_stock_rejected_in_v12(self):
         d = tempfile.mkdtemp()
         p = os.path.join(d, "s.json")
-        json.dump({"quan": {"stock": {"ca_loc": 1}}}, open(p, "w", encoding="utf-8"))
+        _jdump({"quan": {"stock": {"ca_loc": 1}}}, p)
         with self.assertRaises(BadInput):
             load_scenario(p, "quan", T12)
-        json.dump({"quan": {"stock": [item("I1", "ca_loc", 100)]}}, open(p, "w", encoding="utf-8"))
+        _jdump({"quan": {"stock": [item("I1", "ca_loc", 100)]}}, p)
         load_scenario(p, "quan", T12)
 
     def test_v11_unchanged_without_freshness_block(self):
