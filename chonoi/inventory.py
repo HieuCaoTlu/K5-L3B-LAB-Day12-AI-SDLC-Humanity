@@ -83,6 +83,16 @@ def hold_to_items(hold: list) -> dict:
     return {k: counts[k] for k in sorted(counts)}
 
 
+def counts_to_items(counts: dict, start: int = 1) -> list:
+    """Kho đếm -> danh sách cá thể tươi 100, id I<start>.. (cầu nối khi gather chưa tự giữ cá thể; mất thứ tự nhặt)."""
+    out, n = [], start
+    for kind in sorted(counts):
+        for _ in range(int(counts[kind])):
+            out.append({"id": f"I{n}", "kind": kind, "fresh": 100})
+            n += 1
+    return out
+
+
 def item_to_json(it) -> dict:
     """Cá thể (fresh có thể là Fraction/số) -> dạng JSON, fresh làm tròn 6 chữ số."""
     return {"id": it["id"], "kind": it["kind"], "fresh": round(float(it["fresh"]), 6)}

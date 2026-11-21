@@ -231,7 +231,7 @@ class GatherChokeAndFaintTest(unittest.TestCase):
             self.assertEqual([(e["tick"], e["name"], e["data"]) for e in evs], [
                 (1, "choke", {"hp": 0}),
                 (1, "faint", {"cause": "choke", "lost": ["ca_linh", "bong_sung", "ca_loc"], "hp": 0}),
-                (1, "gather_end", {"reason": "fainted", "inventory": {"items": {}}}),
+                (1, "gather_end", {"reason": "fainted", "inventory": {"items": []}}),
             ])
             snap = snapshots(rows)[-1]
             self.assertEqual(snap["tick"], 1)
@@ -243,7 +243,7 @@ class GatherChokeAndFaintTest(unittest.TestCase):
             self.assertEqual(rows[-1]["ticks"], 1)
             self.assertEqual(rows[-1]["reason"], "fainted")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
     def test_faint_stops_step_before_dock_and_time(self):
         g = tuning_gather()
@@ -273,7 +273,7 @@ class GatherChokeAndFaintTest(unittest.TestCase):
             self.assertEqual([e["name"] for e in events(rows)], ["choke", "faint", "gather_end"])
             self.assertEqual(rows[-1]["reason"], "fainted")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
 
 class GatherHarvestAndCatchTest(unittest.TestCase):
@@ -463,7 +463,7 @@ class GatherHarvestAndCatchTest(unittest.TestCase):
             self.assertEqual([e["name"] for e in events(rows)], ["fish_caught", "gather_end"])
             self.assertEqual(rows[-1]["reason"], "time")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"ca_loc": fy["ca_loc"]}})
+                self.assertEqual(json.load(f), {"items": [{"id": f"I{i + 1}", "kind": "ca_loc", "fresh": 100.0} for i in range(fy["ca_loc"])]})
 
 
 class GatherPhase2Test(unittest.TestCase):
@@ -546,7 +546,9 @@ class GatherPhase2Test(unittest.TestCase):
                 ("fish_caught", "ca_keo", g["fish_yield"]["ca_keo"]),
             ])
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"ca_keo": g["fish_yield"]["ca_keo"], "keo_neo": 1}})
+                nk = g["fish_yield"]["ca_keo"]
+                self.assertEqual(json.load(f), {"items": [{"id": "I1", "kind": "keo_neo", "fresh": 100.0}]   # hái keo_neo trước rồi mới bắt cá
+                                                + [{"id": f"I{i + 2}", "kind": "ca_keo", "fresh": 100.0} for i in range(nk)]})
 
     def test_croc_chase_hit_recoil_and_faint(self):
         with Workdir() as w:
@@ -591,7 +593,7 @@ class GatherPhase2Test(unittest.TestCase):
             self.assertEqual([e["name"] for e in events(rows_faint)], ["croc_hit", "faint", "gather_end"])
             self.assertEqual(rows_faint[-1]["reason"], "fainted")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
 
 if __name__ == "__main__":

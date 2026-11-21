@@ -14,7 +14,7 @@ from chonoi.inventory import read_inventory, write_inventory_items
 from chonoi.runner import Session, run
 from chonoi.scenario import load_scenario
 
-BASE = load_contract()["tuning"]
+BASE = {k: v for k, v in load_contract()["tuning"].items() if k != "freshness"}   # v1.1: không hao tươi
 T12 = copy.deepcopy(BASE)
 T12["freshness"] = {"initial": 100, "gather_decay_per_s": 0.5, "quan_decay_per_s": 0.25, "spoiled_below": 30}
 

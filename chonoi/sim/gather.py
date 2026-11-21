@@ -33,6 +33,7 @@ class GatherSim:
     def __init__(self, tuning, scenario, streams, ids):
         t = tuning["gather"]
         self.t = t
+        self.fresh = "freshness" in tuning   # contract v1.2: kho xuất dạng cá thể (xem inventory_items)
         self.rng = streams
         self.ids = ids
         self.day = scenario.get("day", 1)
@@ -120,7 +121,11 @@ class GatherSim:
         self.reason = None
 
     # --- giao diện cho runner -------------------------------------------------
-    def inventory_items(self) -> dict:
+    def inventory_items(self):
+        if self.fresh:
+            # TẠM (Phase 3): gather chưa tự giữ cá thể / hao tươi. Mỗi món trong giỏ -> một cá thể tươi 100,
+            # id I1, I2... theo thứ tự nhặt. Người làm gather thay bằng giỏ cá thể thật (id nối tiếp xuyên ngày, hao 0.5/s).
+            return [{"id": f"I{i + 1}", "kind": k, "fresh": 100} for i, k in enumerate(self.hold)]
         return hold_to_items(self.hold)
 
     def snapshot(self) -> dict:

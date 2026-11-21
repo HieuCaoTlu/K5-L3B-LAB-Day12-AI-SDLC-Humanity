@@ -2,11 +2,10 @@
 
 Người giữ: Hiếu (`sim/quan`). Nguồn: TICKET-03, Test Contract v1.2.
 
-## Cách bật v1.2 (chưa bật trong `game.contract.json`)
-Quán bật độ tươi khi số liệu có khối `freshness`. **Chưa thêm vào `game.contract.json`** vì buổi sáng (`gather`) chưa xuất kho cá thể; bật khi cả hai đầu sẵn sàng:
-1. Thêm vào `tuning`: `"freshness": {"initial": 100, "gather_decay_per_s": 0.5, "quan_decay_per_s": 0.25, "spoiled_below": 30}` và đổi `contract_version` thành `"1.2"`.
-2. `gather` phải: giữ giỏ là mảng cá thể (id I1, I2… nối tiếp xuyên pha/ngày), hao 0.5/s, phát `spoiled` (location `hold`), ghi file kho bằng `inventory.write_inventory_items`, `gather_end.data.inventory` theo schema mới.
-3. Khi đó file kho đếm bị từ chối (mã 2) cả hai phía; `read_inventory(path, fresh=True)` tự chọn theo `"freshness" in tuning` (đã nối vào `headless.py` và `live.py`).
+## Trạng thái v1.2
+`game.contract.json` đã có `contract_version:"1.2"` và khối `freshness`. File kho là mảng cá thể; file kho đếm trả mã 2. Quán và `read_inventory(path, fresh=True)` đã chọn schema theo `"freshness" in tuning` (nối vào `headless.py`, `live.py`).
+
+**Cầu nối TẠM ở `gather` (cần người làm gather thay):** `GatherSim.inventory_items()` khi có `freshness` trả mỗi món trong giỏ thành một cá thể tươi 100, id `I1, I2…` theo thứ tự nhặt (id chưa nối tiếp xuyên ngày). Chưa có: giỏ cá thể thật, hao tươi 0.5/s, `spoiled` ở giỏ (location `hold`), `lost` là mảng cá thể, `gather.hold` trong scenario dạng mảng cá thể.
 
 ## Phần quán đã làm
 - **Kho cá thể** `{id, kind, fresh}`; `fresh` là `Fraction` (chính xác ở ngưỡng 30). File kho: `chonoi/inventory.py` (`validate_item_list`, `read_inventory(fresh=True)`, `write_inventory_items`; ghi nguyên tử, sắp theo id, làm tròn 6 chữ số).
