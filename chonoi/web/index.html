@@ -5,50 +5,577 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quán Ăn Chợ Nổi — chơi thử</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #10161c; color: #e8eef2; font: bold 15px/1.35 'Courier New', monospace; overflow: hidden; }
-  canvas { display: block; width: 100vw; height: calc(100vh - 44px); margin-top: 44px; image-rendering: pixelated; }
-  /* ---- pixel UI: góc vuông, viền đậm, bóng đổ cứng, không bo tròn / làm mờ ---- */
-  #menubar { position: fixed; left: 0; top: 0; right: 0; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 10px;
-    background: #8d5a2e; border-bottom: 4px solid #241410; box-shadow: inset 0 4px 0 #a8703c; z-index: 10; box-sizing: border-box; }
-  #menubar b { margin-right: 8px; color: #ffd36b; text-shadow: 2px 2px 0 #241410; letter-spacing: 1px; }
-  #menubar img, .pxb img { width: 16px; height: 16px; image-rendering: pixelated; vertical-align: -3px; margin-right: 6px; }
-  .pxb { font: bold 14px 'Courier New', monospace; color: #fff6d8; background: #2f7f78; border: 3px solid #241410; border-radius: 0; padding: 4px 10px;
-    box-shadow: inset -3px -3px 0 #1d5a55, inset 3px 3px 0 #4aa59d; cursor: pointer; text-transform: uppercase; letter-spacing: .5px; }
-  .pxb:hover:not(:disabled) { background: #38968d; }
-  .pxb:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: inset 3px 3px 0 #1d5a55; }
-  .pxb:disabled { background: #6b6b6b; color: #b9b9b9; box-shadow: inset -3px -3px 0 #4a4a4a, inset 3px 3px 0 #858585; cursor: not-allowed; }
-  .pxb.sm { padding: 2px 8px; font-size: 13px; } .pxb.wide { width: 100%; margin-top: 8px; }
-  .pxm { background: #efe0b8; color: #241410; border: 4px solid #241410; border-radius: 0; padding: 14px 16px;
-    box-shadow: inset 0 0 0 4px #c9a36b, 8px 8px 0 rgba(0,0,0,.55); box-sizing: border-box; }
-  .pxm .pxh { font-size: 17px; margin-bottom: 8px; letter-spacing: 1px; color: #6e2a1c; }
-  .pxm .pxs { font-size: 12px; color: #5a4a30; margin: 2px 0 6px; }
-  .pxm .pxrow { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; gap: 8px; }
-  .pxm .pxcard { margin: 8px 0; padding: 6px 8px; background: #fff6d8; border: 3px solid #241410; }
-  .pxm .pxcard .pxb { margin-top: 6px; }
-  .pip { display: inline-block; width: 10px; height: 10px; margin-left: 3px; background: #c9b98a; border: 2px solid #241410; vertical-align: middle; }
-  .pip.on { background: #3c8a45; }
-  #rules { position: fixed; left: 50%; top: 64px; transform: translateX(-50%); width: min(580px, 92vw); max-height: calc(100vh - 90px); overflow: auto; z-index: 9; display: none; }
-  #rules { padding: 18px 22px; box-shadow: inset 0 0 0 4px #c9a36b, 8px 8px 0 rgba(0,0,0,.55), 0 0 0 100vmax rgba(8,14,20,.6); }
-  #rules .pxh { font-size: 19px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 4px dashed #c9a36b; }
-  #rules ul { margin: 4px 0 14px; padding-left: 22px; list-style: square; } #rules li { margin: 8px 0; line-height: 1.45; }
-  #rules li::marker { color: #6e2a1c; }
-  #rules b { background: #fff6d8; border: 2px solid #241410; padding: 0 5px; box-shadow: 2px 2px 0 #241410; }
-  #rules .pxb { display: block; margin: 0 auto; padding: 6px 22px; font-size: 15px; }
+  html, body { margin: 0; height: 100%; background: #10161c; color: #e8eef2; font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: calc(100vh - 44px); margin-top: 44px; }
+  #menubar { position: fixed; left: 0; top: 0; right: 0; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    background: #1d2b36; border-bottom: 2px solid #3a4f5f; z-index: 10; box-sizing: border-box; }
+  #menubar b { margin-right: 8px; color: #ffe082; }
+  #menubar button { padding: 5px 12px; border-radius: 10px; border: 2px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font: 14px system-ui; }
+  #menubar button:hover:not(:disabled) { background: #3b566b; }
+  #menubar button:disabled { opacity: .4; cursor: not-allowed; }
+  #rules { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); width: min(560px, 92vw); max-height: calc(100vh - 80px); overflow: auto;
+    background: #fff8e1; color: #4e342e; border: 3px solid #8d6e63; border-radius: 16px; padding: 14px 18px; z-index: 9; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+  #rules h3 { margin: 0 0 8px; } #rules ul { margin: 4px 0 8px; padding-left: 20px; } #rules li { margin: 3px 0; }
+  #audioSpacer { flex: 1; }
+  #audioPanel { position: fixed; right: 12px; top: 52px; width: 250px; background: #1d2b36; color: #e8eef2; border: 2px solid #5f7b8f;
+    border-radius: 14px; padding: 12px 14px; z-index: 12; display: none; box-shadow: 0 10px 26px rgba(0,0,0,.6); font: 13px system-ui, sans-serif; }
+  #audioPanel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 7px 0; }
+  #audioPanel input[type="range"] { width: 120px; accent-color: #ffe082; cursor: pointer; }
+  #audioPanel button { margin-top: 6px; padding: 4px 10px; border-radius: 8px; border: 1px solid #5f7b8f; background: #2c4152; color: #e8eef2; cursor: pointer; font-size: 12px; }
+  #audioPanel button:hover { background: #3b566b; }
 </style>
 </head>
 <body>
 <div id="menubar">
-  <b><img data-ic="boat" alt="">CHỢ NỔI</b>
-  <button class="pxb" id="btnRules"><img data-ic="book" alt="">Luật chơi</button>
-  <button class="pxb" id="btnUpg"><img data-ic="up" alt="">Nâng cấp</button>
-  <button class="pxb" id="btnNext"><img data-ic="play" alt="">Ngày tiếp theo</button>
-  <button class="pxb" id="btnNew"><img data-ic="rewind" alt="">Chơi lại từ đầu</button>
+  <b>🛶 Chợ Nổi</b>
+  <button id="btnRules">📖 Luật chơi</button>
+  <button id="btnUpg">⬆ Nâng cấp</button>
+  <button id="btnNext">▶ Ngày tiếp theo</button>
+  <button id="btnRetry">↻ Làm lại</button>
+  <button id="btnNew">⏮ Chơi lại từ đầu</button>
+  <span id="audioSpacer"></span>
+  <button id="btnAudio" title="Bật/tắt nhạc &amp; âm thanh (M)">🔊 Âm thanh</button>
+  <button id="btnAudioCfg" title="Cài đặt âm lượng">🎚</button>
 </div>
-<button class="pxb" id="btnRetry"><img data-ic="retry" alt="">Bắt đầu lại</button>
+<div id="audioPanel">
+  <div style="font-weight:700;color:#ffe082;margin-bottom:6px">🎵 Âm thanh Quán (Buổi tối)</div>
+  <label><span>Nhạc nền</span><input id="volBgm" type="range" min="0" max="100" value="44"></label>
+  <label><span>Sông đêm</span><input id="volAmb" type="range" min="0" max="100" value="30"></label>
+  <label><span>Hiệu ứng</span><input id="volSfx" type="range" min="0" max="100" value="80"></label>
+  <div style="display:flex;gap:6px;justify-content:space-between">
+    <button id="btnAudioTest">🔔 Thử chuông</button>
+    <button id="btnAudioClose">Đóng</button>
+  </div>
+</div>
 <div id="rules" class="pxm"></div>
 <canvas id="c"></canvas>
 <script>
 "use strict";
+
+// ---------- Âm thanh phần Quán (Web Audio API tự tổng hợp trực tiếp trong index.html) ----------
+(function (global) {
+  const STORAGE_KEY = "chonoi_quan_audio_v1";
+  const N = {
+    F2: 41, G2: 43, A2: 45, Bb2: 46, C3: 48, D3: 50, E3: 52, F3: 53, G3: 55, A3: 57, Bb3: 58,
+    C4: 60, D4: 62, E4: 64, F4: 65, "F#4": 66, G4: 67, A4: 69, Bb4: 70, B4: 71,
+    C5: 72, D5: 74, E5: 76, F5: 77, "F#5": 78, G5: 79, A5: 81, Bb5: 82, B5: 83,
+    C6: 84, D6: 86, F6: 89, A6: 93,
+  };
+  const hz = (n) => (N[n] ? 440 * Math.pow(2, (N[n] - 69) / 12) : 440);
+
+  // 16 ô nhịp F ngũ cung Nam Bộ (Đêm Chợ Nổi — ~111 BPM)
+  const NIGHT_CHORDS = [
+    ["F2", ["A3", "C4", "E4"]], ["D2", ["F3", "A3", "C4"]], ["G2", ["Bb3", "D4", "F4"]], ["C2", ["G3", "Bb3", "E4"]],
+    ["F2", ["A3", "C4", "E4"]], ["A2", ["C4", "E4", "G4"]], ["Bb2", ["D4", "F4", "G4"]], ["C2", ["G3", "Bb3", "D4"]],
+    ["Bb2", ["D4", "F4", "A4"]], ["C2", ["G3", "Bb3", "E4"]], ["D2", ["F3", "A3", "C4"]], ["G2", ["D4", "F4", "A4"]],
+    ["F2", ["A3", "C4", "E4"]], ["D2", ["F3", "A3", "C4"]], ["G2", ["Bb3", "D4", "F4"]], ["C2", ["G3", "Bb3", "E4"]],
+  ];
+  // [beat, note, durBeats, vel, bendCents] — Đàn Tranh (A) + điểm xuyết (B)
+  const NIGHT_PLUCK = [
+    [0, "C5", .75, .85, -35], [.75, "D5", .5, .78, 0], [1.25, "F5", .75, .90, -40], [2, "G5", .75, .86, 0], [2.75, "A5", 1.25, .92, -30],
+    [4.25, "G5", .5, .80, 0], [4.75, "F5", .75, .84, 0], [5.5, "D5", .75, .82, -25], [6.25, "C5", .75, .78, 0], [7, "A4", 1, .76, 0],
+    [8, "D5", .5, .82, -25], [8.5, "F5", .5, .85, 0], [9, "G5", .75, .88, -35], [9.75, "F5", .5, .80, 0], [10.25, "D5", .75, .82, 0], [11, "C5", 1, .78, 0],
+    [12, "G4", .75, .76, 0], [12.75, "A4", .75, .80, -25], [13.5, "C5", 1.25, .86, 0], [15, "D5", .5, .74, 0], [15.5, "E5", .5, .76, 0],
+    [16, "F5", .75, .90, -35], [16.75, "A5", .75, .92, 0], [17.5, "C6", .75, .90, -30], [18.25, "A5", .75, .86, 0], [19, "G5", .5, .82, 0], [19.5, "F5", .5, .80, 0],
+    [20, "E5", .75, .82, 0], [20.75, "D5", .75, .80, -25], [21.5, "C5", 1, .84, 0], [22.75, "A4", .5, .74, 0], [23.25, "C5", .75, .78, 0],
+    [24, "D5", .5, .82, -30], [24.5, "F5", .5, .86, 0], [25, "D5", .5, .80, 0], [25.5, "C5", .5, .78, 0], [26, "A4", .75, .80, -25], [26.75, "G4", .75, .78, 0], [27.5, "A4", .5, .76, 0],
+    [28, "G4", .75, .82, -25], [28.75, "F4", 1.25, .85, 0], [30.5, "C5", .5, .70, 0], [31, "D5", .5, .74, 0], [31.5, "F5", .5, .78, 0],
+    [35, "G5", .5, .66, 0], [35.5, "F5", .5, .62, 0], [39, "G4", .5, .64, 0], [39.5, "A4", .5, .66, -25],
+    [47, "D5", .5, .66, -25], [47.5, "E5", .5, .70, 0], [48, "F5", .75, .74, -30], [49.5, "G5", .5, .68, 0], [50, "A5", .5, .72, 0],
+    [54.5, "A4", .5, .64, 0], [55, "C5", .5, .68, 0], [55.5, "D5", .5, .70, 0], [58, "Bb5", .5, .66, 0], [59, "G5", .5, .64, 0],
+    [61.5, "G4", .5, .68, 0], [62.5, "A4", .5, .70, -25], [63.25, "Bb4", .75, .72, 0],
+  ];
+  // Sáo trúc đối đáp phần B
+  const NIGHT_FLUTE = [
+    [32, "D5", 1, .72, null], [33, "F5", 1, .76, "D5"], [34, "A5", 1.7, .80, "F5"],
+    [36, "G5", 1, .74, "A5"], [37, "E5", 1, .70, "G5"], [38, "C5", 1.7, .72, "E5"],
+    [40, "F5", .75, .74, null], [40.75, "A5", .75, .78, "F5"], [41.5, "G5", 1, .76, "A5"], [42.5, "F5", .75, .72, "G5"], [43.25, "D5", .75, .70, "F5"],
+    [44, "G5", 1.25, .78, "D5"], [45.5, "E5", 1, .74, "G5"], [46.5, "C5", 1.2, .70, "E5"],
+    [48, "A5", 1, .80, null], [49, "C6", 1.25, .82, "A5"], [50.5, "A5", .75, .76, "C6"], [51.25, "G5", .75, .74, "A5"],
+    [52, "F5", 1, .76, "G5"], [53, "D5", 1, .72, "F5"], [54, "C5", 1.7, .72, "D5"],
+    [56, "D5", .75, .72, null], [56.75, "F5", .75, .76, "D5"], [57.5, "G5", 1, .78, "F5"], [58.5, "F5", .75, .74, "G5"], [59.25, "D5", .75, .70, "F5"],
+    [60, "C5", 1.5, .74, "D5"], [62, "A4", 1.5, .68, "C5"],
+  ];
+
+  // 8 ô nhịp G ngũ cung cao điểm (~133 BPM)
+  const RUSH_CHORDS = [
+    ["G2", ["B3", "D4", "F#4"]], ["E2", ["G3", "B3", "D4"]], ["A2", ["C4", "E4", "G4"]], ["D2", ["A3", "C4", "F#4"]],
+    ["G2", ["B3", "D4", "F#4"]], ["B2", ["D4", "F#4", "A4"]], ["C2", ["E3", "G3", "A3"]], ["D2", ["A3", "C4", "F#4"]],
+  ];
+  const RUSH_MEL = [
+    [0, "D5", .5, .90, -30], [.5, "E5", .5, .84, 0], [1, "G5", .5, .92, -35], [1.5, "A5", .5, .88, 0], [2, "B5", .75, .92, -25], [2.75, "A5", .5, .84, 0], [3.25, "G5", .75, .86, 0],
+    [4, "E5", .5, .84, 0], [4.5, "G5", .5, .86, -25], [5, "A5", .75, .88, 0], [5.75, "G5", .5, .82, 0], [6.25, "E5", .75, .82, 0], [7, "D5", 1, .84, 0],
+    [8, "E5", .5, .86, -25], [8.5, "G5", .5, .88, 0], [9, "A5", .5, .90, 0], [9.5, "B5", .5, .88, 0], [10, "A5", .75, .86, 0], [10.75, "G5", .5, .80, 0], [11.25, "E5", .75, .82, 0],
+    [12, "D5", .5, .82, 0], [12.5, "E5", .5, .84, 0], [13, "G5", .75, .88, -30], [13.75, "A5", .75, .86, 0], [14.5, "F#5", .75, .82, 0], [15.25, "D5", .75, .78, 0],
+    [16, "G5", .5, .92, -30], [16.5, "A5", .5, .88, 0], [17, "B5", .5, .92, 0], [17.5, "D6", .5, .92, -25], [18, "B5", .75, .88, 0], [18.75, "A5", .5, .84, 0], [19.25, "G5", .75, .86, 0],
+    [20, "F#5", .5, .84, 0], [20.5, "A5", .5, .86, 0], [21, "B5", .75, .90, -30], [21.75, "A5", .5, .82, 0], [22.25, "F#5", .75, .80, 0], [23, "D5", 1, .80, 0],
+    [24, "E5", .5, .88, -25], [24.5, "G5", .5, .90, 0], [25, "A5", .5, .92, 0], [25.5, "G5", .5, .86, 0], [26, "E5", .5, .86, 0], [26.5, "G5", .5, .88, 0], [27, "A5", 1, .90, 0],
+    [28, "B5", .5, .90, -25], [28.5, "A5", .5, .86, 0], [29, "G5", .5, .84, 0], [29.5, "E5", .5, .82, 0], [30, "D5", .75, .86, 0], [30.75, "E5", .5, .82, 0], [31.25, "F#5", .75, .84, 0],
+  ];
+
+  const st = {
+    ctx: null, master: null, bgm: null, amb: null, sfx: null, rev: null, revSend: null,
+    noise: null, unlocked: false, muted: false, bgmVol: 0.44, ambVol: 0.30, sfxVol: 0.80,
+    scene: "off", timer: null, ambTimer: null, ambNodes: null, beat: 0, nextT: 0,
+    lastSfx: {}, onChange: null,
+  };
+
+  function loadPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      if (!p) return;
+      if (typeof p.muted === "boolean") st.muted = p.muted;
+      if (typeof p.bgmVol === "number") st.bgmVol = Math.max(0, Math.min(1, p.bgmVol));
+      if (typeof p.ambVol === "number") st.ambVol = Math.max(0, Math.min(1, p.ambVol));
+      if (typeof p.sfxVol === "number") st.sfxVol = Math.max(0, Math.min(1, p.sfxVol));
+    } catch (e) {}
+  }
+  function savePrefs() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ muted: st.muted, bgmVol: st.bgmVol, ambVol: st.ambVol, sfxVol: st.sfxVol })); } catch (e) {}
+  }
+  function notify() { if (typeof st.onChange === "function") st.onChange(getState()); }
+
+  function ensureCtx() {
+    if (st.ctx) return st.ctx;
+    const AC = global.AudioContext || global.webkitAudioContext;
+    if (!AC) return null;
+    const ctx = st.ctx = new AC();
+    st.master = ctx.createGain();
+    st.bgm = ctx.createGain();
+    st.amb = ctx.createGain();
+    st.sfx = ctx.createGain();
+    st.revSend = ctx.createGain();
+    st.revSend.gain.value = 0.22;
+
+    // Room reverb ấm áp cho đèn lồng chợ nổi
+    const irLen = Math.floor(ctx.sampleRate * 0.72);
+    const ir = ctx.createBuffer(2, irLen, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const ch = ir.getChannelData(c);
+      let lp = 0;
+      for (let i = 0; i < irLen; i++) {
+        const w = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.19));
+        lp = lp * 0.65 + w * 0.35;
+        ch[i] = lp;
+      }
+    }
+    st.rev = ctx.createConvolver();
+    st.rev.buffer = ir;
+    st.revSend.connect(st.rev);
+    st.rev.connect(st.master);
+    st.bgm.connect(st.master);
+    st.amb.connect(st.master);
+    st.sfx.connect(st.master);
+    st.master.connect(ctx.destination);
+
+    // Pink noise 2 giây cho sóng nước & percussion
+    const nl = ctx.sampleRate * 2, nb = ctx.createBuffer(1, nl, ctx.sampleRate), nd = nb.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < nl; i++) {
+      const w = Math.random() * 2 - 1;
+      b0 = 0.997 * b0 + w * 0.029; b1 = 0.985 * b1 + w * 0.032; b2 = 0.950 * b2 + w * 0.048;
+      nd[i] = Math.max(-1, Math.min(1, (b0 + b1 + b2 + w * 0.18) * 1.4));
+    }
+    st.noise = nb;
+    applyGains();
+    return ctx;
+  }
+
+  function applyGains() {
+    if (!st.ctx) return;
+    const t = st.ctx.currentTime;
+    st.master.gain.setTargetAtTime(st.muted ? 0 : 1, t, 0.025);
+    st.bgm.gain.setTargetAtTime(st.bgmVol, t, 0.03);
+    st.amb.gain.setTargetAtTime(st.ambVol, t, 0.04);
+    st.sfx.gain.setTargetAtTime(st.sfxVol, t, 0.02);
+  }
+
+  function routeOut(ctx, node, dest, pan, revAmt) {
+    let target = dest;
+    const p = Math.max(-0.65, Math.min(0.65, pan || 0));
+    if (typeof ctx.createStereoPanner === "function" && Math.abs(p) > 0.02) {
+      const pn = ctx.createStereoPanner();
+      pn.pan.value = p;
+      pn.connect(dest);
+      target = pn;
+    }
+    node.connect(target);
+    if (revAmt && st.revSend && dest !== st.revSend) {
+      const rg = ctx.createGain();
+      rg.gain.value = revAmt;
+      node.connect(rg);
+      rg.connect(st.revSend);
+    }
+  }
+
+  function playDanTranh(ctx, freq, t, dur, vel, bend) {
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+    const flt = ctx.createBiquadFilter(), g = ctx.createGain();
+    o1.type = "triangle"; o2.type = "sine";
+    o1.frequency.setValueAtTime(freq, t);
+    o2.frequency.setValueAtTime(freq * 2.001, t);
+    if (bend) {
+      o1.detune.setValueAtTime(bend, t); o1.detune.linearRampToValueAtTime(0, t + 0.055);
+      o2.detune.setValueAtTime(bend, t); o2.detune.linearRampToValueAtTime(0, t + 0.055);
+    }
+    flt.type = "lowpass"; flt.Q.value = 1.4;
+    flt.frequency.setValueAtTime(Math.min(4400, freq * 5.2), t);
+    flt.frequency.exponentialRampToValueAtTime(Math.max(320, Math.min(1400, freq * 2.0)), t + Math.min(0.24, dur));
+    const g2 = ctx.createGain(); g2.gain.value = 0.25;
+    o1.connect(flt); o2.connect(g2); g2.connect(flt);
+    flt.connect(g);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.22 * vel, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.06, dur));
+    routeOut(ctx, g, st.bgm, 0.08, 0.26);
+    o1.start(t); o2.start(t); o1.stop(t + dur + 0.04); o2.stop(t + dur + 0.04);
+  }
+
+  function playSaoTruc(ctx, freq, t, dur, vel, glideHz) {
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), vib = ctx.createOscillator();
+    const vg = ctx.createGain(), g = ctx.createGain(), g2 = ctx.createGain();
+    o1.type = "sine"; o2.type = "sine"; vib.type = "sine"; vib.frequency.value = 5.2;
+    vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(10, t + Math.min(0.22, dur * 0.6));
+    vib.connect(vg); vg.connect(o1.detune); vg.connect(o2.detune);
+    if (glideHz) {
+      o1.frequency.setValueAtTime(glideHz, t); o1.frequency.exponentialRampToValueAtTime(Math.max(20, freq), t + 0.055);
+      o2.frequency.setValueAtTime(glideHz * 2, t); o2.frequency.exponentialRampToValueAtTime(Math.max(40, freq * 2), t + 0.055);
+    } else {
+      o1.frequency.setValueAtTime(freq, t); o2.frequency.setValueAtTime(freq * 2, t);
+    }
+    g2.gain.value = 0.16;
+    o1.connect(g); o2.connect(g2); g2.connect(g);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.15 * vel, t + 0.045);
+    g.gain.setValueAtTime(0.13 * vel, t + Math.max(0.05, dur - 0.07));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.06, dur));
+    routeOut(ctx, g, st.bgm, -0.10, 0.30);
+    o1.start(t); o2.start(t); vib.start(t);
+    o1.stop(t + dur + 0.04); o2.stop(t + dur + 0.04); vib.stop(t + dur + 0.04);
+  }
+
+  function playMarimba(ctx, freq, t, dur, vel) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.08 * vel, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    routeOut(ctx, g, st.bgm, -0.14, 0.14);
+    o.connect(g); o.start(t); o.stop(t + dur + 0.03);
+  }
+
+  function playBass(ctx, freq, t, dur, vel) {
+    const o = ctx.createOscillator(), flt = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = "triangle"; o.frequency.setValueAtTime(freq, t);
+    flt.type = "lowpass"; flt.frequency.value = 580;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.28 * vel, t + 0.007);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(flt); flt.connect(g); g.connect(st.bgm);
+    o.start(t); o.stop(t + dur + 0.03);
+  }
+
+  function playPerc(ctx, kind, t, vel, dest, pan) {
+    const out = dest || st.bgm;
+    if (kind === "kick") {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(125, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.085);
+      g.gain.setValueAtTime(0.20 * vel, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+      o.connect(g); routeOut(ctx, g, out, pan || 0, 0); o.start(t); o.stop(t + 0.15);
+    } else if (kind === "mo" || kind === "songloan") {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = kind === "songloan" ? "sine" : "triangle";
+      o.frequency.setValueAtTime(kind === "songloan" ? 980 : 540, t);
+      g.gain.setValueAtTime((kind === "songloan" ? 0.10 : 0.12) * vel, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === "songloan" ? 0.045 : 0.07));
+      o.connect(g); routeOut(ctx, g, out, pan || 0, 0.10); o.start(t); o.stop(t + 0.09);
+    } else if (kind === "shaker" && st.noise) {
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      s.buffer = st.noise; f.type = "bandpass"; f.frequency.value = 5400; f.Q.value = 1.2;
+      g.gain.setValueAtTime(0.042 * vel, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.042);
+      s.connect(f); f.connect(g); routeOut(ctx, g, out, pan || 0.15, 0);
+      s.start(t, Math.random() * 1.4, 0.05);
+    }
+  }
+
+  function scheduleBeat(ctx, mode, beatIdx, t0) {
+    const rush = mode === "rush";
+    const beatDur = rush ? 0.45 : 0.54;
+    const bar = beatIdx >> 2, inBar = beatIdx & 3;
+    const sw = rush ? 0 : 0.024;
+    const [bassRoot, tones] = (rush ? RUSH_CHORDS : NIGHT_CHORDS)[bar];
+    const rootHz = hz(bassRoot), fifthHz = rootHz * 1.4983;
+
+    // Bass + Marimba + Bộ gõ gỗ
+    if (rush) {
+      playBass(ctx, inBar === 0 ? rootHz : inBar === 2 ? rootHz * 2 : fifthHz, t0, beatDur * 0.85, inBar % 2 === 0 ? 0.9 : 0.75);
+      tones.forEach((tn, idx) => playMarimba(ctx, hz(tn), t0 + beatDur * 0.5 + idx * 0.006, 0.20, 0.65));
+      playPerc(ctx, "kick", t0, inBar % 2 === 0 ? 0.8 : 0.5);
+      playPerc(ctx, "songloan", t0 + beatDur * 0.5, inBar % 2 ? 0.8 : 0.55);
+      if (inBar === 1 || inBar === 3) playPerc(ctx, "mo", t0, 0.72);
+      playPerc(ctx, "shaker", t0, 0.55); playPerc(ctx, "shaker", t0 + beatDur * 0.5, 0.42);
+    } else {
+      if (inBar === 0) {
+        playBass(ctx, rootHz, t0, beatDur * 1.25, 0.88);
+        playPerc(ctx, "kick", t0, 0.75);
+        tones.forEach((tn, idx) => playMarimba(ctx, hz(tn), t0 + beatDur * 0.5 + sw + idx * 0.008, 0.30, 0.56));
+      } else if (inBar === 1) {
+        playBass(ctx, fifthHz, t0 + beatDur * 0.5, beatDur * 0.8, 0.72);
+        playPerc(ctx, "mo", t0, 0.60);
+        tones.forEach((tn, idx) => playMarimba(ctx, hz(tn), t0 + beatDur * 0.5 + sw + idx * 0.008, 0.30, 0.62));
+      } else if (inBar === 2) {
+        playBass(ctx, rootHz * (bar % 2 ? 2 : 1), t0, beatDur * 1.0, 0.80);
+        playPerc(ctx, "kick", t0, 0.58);
+        tones.forEach((tn, idx) => playMarimba(ctx, hz(tn), t0 + beatDur * 0.5 + sw + idx * 0.008, 0.28, 0.52));
+        if (bar % 2 === 1) playPerc(ctx, "songloan", t0 + beatDur * 0.5 + sw, 0.68);
+      } else {
+        playBass(ctx, fifthHz, t0 + beatDur * 0.5, beatDur * 0.55, 0.65);
+        playPerc(ctx, "mo", t0, 0.68);
+        tones.forEach((tn, idx) => playMarimba(ctx, hz(tn), t0 + beatDur * 0.25 + idx * 0.008, 0.26, 0.56));
+        if (bar % 4 === 3) {
+          playPerc(ctx, "songloan", t0 + beatDur * 0.5, 0.74);
+          playPerc(ctx, "songloan", t0 + beatDur * 0.75, 0.58);
+        }
+      }
+      playPerc(ctx, "shaker", t0, 0.50);
+      playPerc(ctx, "shaker", t0 + beatDur * 0.5 + sw, 0.36);
+    }
+
+    // Giai điệu chính
+    const mel = rush ? RUSH_MEL : NIGHT_PLUCK;
+    mel.forEach(([b, nt, d, v, bend]) => {
+      if (b >= beatIdx && b < beatIdx + 1) {
+        const off = (b - beatIdx) * beatDur + (Math.abs((b % 1) - 0.5) < 0.02 && !rush ? sw : 0);
+        playDanTranh(ctx, hz(nt), t0 + off, Math.max(0.28, d * beatDur * 1.25), v, bend || 0);
+        if (rush && beatIdx >= 16 && (b * 2) % 2 === 0) playSaoTruc(ctx, hz(nt), t0 + off, d * beatDur * 1.2, v * 0.55, null);
+      }
+    });
+    if (!rush) {
+      NIGHT_FLUTE.forEach(([b, nt, d, v, gl]) => {
+        if (b >= beatIdx && b < beatIdx + 1) {
+          playSaoTruc(ctx, hz(nt), t0 + (b - beatIdx) * beatDur, d * beatDur * 0.96, v, gl ? hz(gl) : null);
+        }
+      });
+    }
+  }
+
+  function startAmbience(ctx) {
+    if (!st.ambNodes && st.noise) {
+      const src = ctx.createBufferSource(), flt = ctx.createBiquadFilter(), lfo = ctx.createOscillator(), lg = ctx.createGain(), g = ctx.createGain();
+      src.buffer = st.noise; src.loop = true;
+      flt.type = "bandpass"; flt.frequency.value = 340; flt.Q.value = 0.85;
+      lfo.type = "sine"; lfo.frequency.value = 0.22; lg.gain.value = 120;
+      lfo.connect(lg); lg.connect(flt.frequency);
+      g.gain.value = 0.24;
+      src.connect(flt); flt.connect(g); g.connect(st.amb);
+      src.start(); lfo.start();
+      st.ambNodes = { src, lfo };
+    }
+    if (!st.ambTimer) {
+      st.ambTimer = setInterval(() => {
+        if (!st.unlocked || st.muted || (st.scene !== "night" && st.scene !== "rush")) return;
+        const c = st.ctx, t = c.currentTime + 0.05;
+        if (Math.random() < 0.65) {
+          // Tiếng dế sông đêm nhẹ xa xa
+          for (let p = 0; p < 3; p++) {
+            const o = c.createOscillator(), g = c.createGain();
+            o.type = "sine"; o.frequency.value = 4050;
+            const tp = t + p * 0.075;
+            g.gain.setValueAtTime(0.0001, tp); g.gain.linearRampToValueAtTime(0.014, tp + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, tp + 0.045);
+            o.connect(g); routeOut(c, g, st.amb, Math.random() * 0.8 - 0.4, 0.2);
+            o.start(tp); o.stop(tp + 0.055);
+          }
+        } else {
+          // Giọt nước vỗ mạn xuồng
+          const o = c.createOscillator(), g = c.createGain();
+          const f0 = 300 + Math.random() * 90;
+          o.type = "sine"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 + 180, t + 0.08);
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.025, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+          o.connect(g); routeOut(c, g, st.amb, Math.random() * 0.8 - 0.4, 0.15);
+          o.start(t); o.stop(t + 0.10);
+        }
+      }, 1700);
+    }
+  }
+
+  function stopAmbience() {
+    if (st.ambTimer) { clearInterval(st.ambTimer); st.ambTimer = null; }
+    if (st.ambNodes) {
+      try { st.ambNodes.src.stop(); st.ambNodes.lfo.stop(); } catch (e) {}
+      st.ambNodes = null;
+    }
+  }
+
+  function syncLoops() {
+    if (!st.unlocked) return;
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    if (st.scene === "off") {
+      if (st.timer) { clearInterval(st.timer); st.timer = null; }
+      stopAmbience();
+      return;
+    }
+    startAmbience(ctx);
+    if (st.scene === "ended") {
+      if (st.timer) { clearInterval(st.timer); st.timer = null; }
+      return;
+    }
+    if (!st.timer) {
+      st.nextT = ctx.currentTime + 0.04;
+      st.timer = setInterval(() => {
+        if (!st.unlocked || (st.scene !== "night" && st.scene !== "rush")) return;
+        const c = st.ctx, rush = st.scene === "rush";
+        const beatDur = rush ? 0.45 : 0.54, totalBeats = rush ? 32 : 64;
+        if (st.nextT < c.currentTime - 0.35) st.nextT = c.currentTime + 0.04;
+        while (st.nextT < c.currentTime + 0.20) {
+          scheduleBeat(c, st.scene, st.beat % totalBeats, st.nextT);
+          st.beat = (st.beat + 1) % totalBeats;
+          st.nextT += beatDur;
+        }
+      }, 50);
+    }
+  }
+
+  function toneSfx(ctx, dest, opts) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = opts.type || "sine";
+    if (opts.f1) {
+      o.frequency.setValueAtTime(opts.f0, opts.t);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20, opts.f1), opts.t + (opts.slideDur || opts.dur));
+    } else {
+      o.frequency.setValueAtTime(opts.f0, opts.t);
+    }
+    g.gain.setValueAtTime(0.0001, opts.t);
+    g.gain.linearRampToValueAtTime(opts.gain || 0.25, opts.t + (opts.att || 0.004));
+    g.gain.exponentialRampToValueAtTime(0.0001, opts.t + Math.max(0.025, opts.dur));
+    o.connect(g);
+    routeOut(ctx, g, dest, opts.pan || 0, opts.rev || 0);
+    o.start(opts.t); o.stop(opts.t + opts.dur + 0.03);
+  }
+
+  function playSfx(name, opts) {
+    if (!st.unlocked || st.muted) return;
+    opts = opts || {};
+    const nowMs = performance.now();
+    const cd = opts.cooldownMs || (name === "step_wood" ? 160 : 35);
+    if (st.lastSfx[name] && nowMs - st.lastSfx[name] < cd) return;
+    st.lastSfx[name] = nowMs;
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime, pan = opts.pan || 0, j = opts.jitter ? 1 + (Math.random() * 2 - 1) * opts.jitter : 1;
+    const gScale = opts.gain !== undefined ? opts.gain : 1.0, dest = st.sfx;
+
+    switch (name) {
+      case "customer_arrive":
+        playPerc(ctx, "kick", t, 0.55 * gScale, dest, pan);
+        playPerc(ctx, "mo", t + 0.03, 0.5 * gScale, dest, pan);
+        toneSfx(ctx, dest, { t: t + 0.06, f0: hz("F5"), dur: 0.30, gain: 0.24 * gScale, pan, rev: 0.16 });
+        toneSfx(ctx, dest, { t: t + 0.18, f0: hz("C6"), dur: 0.36, gain: 0.28 * gScale, pan, rev: 0.18 });
+        break;
+      case "cook_start":
+        playPerc(ctx, "mo", t, 0.65 * gScale, dest, pan);
+        if (st.noise) {
+          const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+          s.buffer = st.noise; f.type = "bandpass"; f.frequency.value = 4600; f.Q.value = 0.9;
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.24 * gScale, t + 0.025);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.52);
+          s.connect(f); f.connect(g); routeOut(ctx, g, dest, pan, 0.06); s.start(t, 0, 0.55);
+        }
+        break;
+      case "fridge_open":
+        toneSfx(ctx, dest, { t, f0: 145, f1: 310, slideDur: 0.05, dur: 0.08, gain: 0.22 * gScale, pan });
+        [2200, 2850, 3300].forEach((f, i) => toneSfx(ctx, dest, { t: t + 0.07 + i * 0.06, f0: f, dur: 0.12, gain: 0.14 * gScale, pan, rev: 0.12 }));
+        break;
+      case "dish_ready":
+        toneSfx(ctx, dest, { t, f0: hz("A5"), dur: 0.34, gain: 0.28 * gScale, pan, rev: 0.18 });
+        toneSfx(ctx, dest, { t: t + 0.09, f0: hz("D6"), dur: 0.45, gain: 0.32 * gScale, pan, rev: 0.22 });
+        break;
+      case "dish_pickup":
+        playPerc(ctx, "mo", t, 0.55 * gScale, dest, pan);
+        toneSfx(ctx, dest, { t, f0: 340 * j, f1: 680 * j, slideDur: 0.09, dur: 0.16, type: "triangle", gain: 0.22 * gScale, pan });
+        break;
+      case "serve":
+        playPerc(ctx, "mo", t, 0.6 * gScale, dest, pan);
+        toneSfx(ctx, dest, { t: t + 0.06, f0: hz("F5"), dur: 0.16, type: "triangle", gain: 0.20 * gScale, pan, rev: 0.10 });
+        toneSfx(ctx, dest, { t: t + 0.14, f0: hz("A5"), dur: 0.20, type: "triangle", gain: 0.22 * gScale, pan, rev: 0.12 });
+        break;
+      case "coin_pay":
+        toneSfx(ctx, dest, { t, f0: hz("C6") * j, dur: 0.22, gain: 0.26 * gScale, pan, rev: 0.15 });
+        toneSfx(ctx, dest, { t: t + 0.07, f0: hz("F6") * j, dur: 0.36, gain: 0.30 * gScale, pan, rev: 0.18 });
+        break;
+      case "coin_tip":
+        ["C6", "D6", "F6", "A6"].forEach((k, i) => toneSfx(ctx, dest, { t: t + i * 0.065, f0: hz(k) * j, dur: 0.34, gain: 0.24 * gScale, pan, rev: 0.20 }));
+        break;
+      case "customer_angry":
+        toneSfx(ctx, dest, { t, f0: 255, f1: 215, dur: 0.13, type: "triangle", gain: 0.22 * gScale, pan });
+        toneSfx(ctx, dest, { t: t + 0.14, f0: 205, f1: 160, dur: 0.16, type: "triangle", gain: 0.20 * gScale, pan });
+        break;
+      case "customer_leave":
+        toneSfx(ctx, dest, { t, f0: 410, f1: 235, slideDur: 0.40, dur: 0.42, type: "triangle", gain: 0.24 * gScale, pan, rev: 0.10 });
+        playPerc(ctx, "kick", t + 0.27, 0.50 * gScale, dest, pan);
+        break;
+      case "dish_waste":
+        toneSfx(ctx, dest, { t, f0: 190, f1: 78, slideDur: 0.22, dur: 0.25, type: "triangle", gain: 0.26 * gScale, pan });
+        break;
+      case "buy":
+        playPerc(ctx, "songloan", t + 0.04, 0.65 * gScale, dest, pan);
+        toneSfx(ctx, dest, { t: t + 0.10, f0: hz("G5") * j, dur: 0.26, gain: 0.24 * gScale, pan, rev: 0.14 });
+        break;
+      case "upgrade":
+        ["F5", "G5", "A5", "C6", "F6"].forEach((k, i) => toneSfx(ctx, dest, { t: t + i * 0.085, f0: hz(k), dur: 0.32, type: "triangle", gain: 0.22 * gScale, pan, rev: 0.22 }));
+        break;
+      case "error":
+        playPerc(ctx, "mo", t, 0.55 * gScale, dest, pan);
+        toneSfx(ctx, dest, { t: t + 0.08, f0: 225, dur: 0.11, type: "triangle", gain: 0.18 * gScale, pan });
+        break;
+      case "step_wood":
+        toneSfx(ctx, dest, { t, f0: 168 * j, f1: 120 * j, dur: 0.065, gain: 0.18 * gScale, pan });
+        break;
+      case "ui_click":
+        playPerc(ctx, "songloan", t, 0.70 * gScale, dest, pan);
+        break;
+      case "jingle_end":
+        ["C5", "D5", "F5", "A5", "C6"].forEach((k, i) => toneSfx(ctx, dest, { t: t + i * 0.15, f0: hz(k), dur: i === 4 ? 1.1 : 0.32, type: "triangle", gain: 0.26 * gScale, pan: 0, rev: 0.26 }));
+        break;
+    }
+  }
+
+  function unlock() {
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().then(() => { st.unlocked = true; syncLoops(); notify(); }).catch(() => {});
+    } else if (!st.unlocked) {
+      st.unlocked = true; syncLoops(); notify();
+    }
+  }
+  function setScene(scene) {
+    if (st.scene === scene) return;
+    if ((st.scene === "night" || st.scene === "rush") && (scene === "night" || scene === "rush")) st.beat = 0;
+    st.scene = scene;
+    syncLoops();
+    notify();
+  }
+  function setMuted(m) { st.muted = !!m; applyGains(); savePrefs(); notify(); }
+  function toggleMute() { unlock(); setMuted(!st.muted); return st.muted; }
+  function setVolume(ch, val) {
+    const v = Math.max(0, Math.min(1, Number(val)));
+    if (Number.isNaN(v)) return;
+    if (ch === "bgm") st.bgmVol = v;
+    else if (ch === "ambience") st.ambVol = v;
+    else if (ch === "sfx") st.sfxVol = v;
+    applyGains(); savePrefs(); notify();
+  }
+  function getState() {
+    return { unlocked: st.unlocked, muted: st.muted, bgmVol: st.bgmVol, ambVol: st.ambVol, sfxVol: st.sfxVol, scene: st.scene };
+  }
+
+  function onStateChange(fn) { st.onChange = fn; }
+
+  loadPrefs();
+  ["keydown", "pointerdown", "click"].forEach((ev) => global.addEventListener(ev, unlock, { passive: true }));
+  global.QuanAudio = { unlock, setScene, playSfx, setMuted, toggleMute, setVolume, getState, onStateChange };
+})(window);
 /*
  * Client chơi trực tiếp (starter). CHỈ ĐỌC snapshot từ GET /state và gửi phím qua POST /input.
  * Trường nào snapshot chưa có thì bỏ qua (nhóm viết luật tới đâu, hình hiện tới đó). Hình khối tạm, thay bằng đồ họa của nhóm.
@@ -91,6 +618,7 @@ function keyName(e) { return e.key.length === 1 ? e.key.toLowerCase() : e.key.to
 addEventListener("keydown", (e) => {
   const k = keyName(e);
   if (e.repeat) { if (k === " " || k.startsWith("arrow")) e.preventDefault(); return; }
+  if (k === "m" && window.QuanAudio) { window.QuanAudio.toggleMute(); return; }
   if (MOVE_KEYS[k]) { down.add(MOVE_KEYS[k]); e.preventDefault(); }
   else if (k === "e") down.add("interact");
   else if (k === " ") { down.add("catch"); e.preventDefault(); }
@@ -112,6 +640,7 @@ async function poll() {
     snap = await r.json();
     offline = false;
     trackPlayer();
+    handleQuanAudio(snap);
   } catch (e) { offline = true; }
   setTimeout(poll, 16);
 }
@@ -122,10 +651,10 @@ const KIND_COLOR = { coca: "#b71c1c", ca_loc: "#7c9a52", ca_linh: "#d6e6f2", ca_
 const KIND_NAME = { coca: "coca", ca_loc: "cá lóc", ca_linh: "cá linh", ca_keo: "cá kèo", bong_dien_dien: "điên điển", bong_sung: "bông súng", keo_neo: "kèo nèo" };
 const kc = (k) => KIND_COLOR[k] || "#bbbbbb";
 
+const topInset = () => (snap && snap.mode === "quan" ? 0 : 44);
 function fit() {
   const dpr = window.devicePixelRatio || 1;
-  const barH = document.getElementById("menubar").style.display === "none" ? 0 : 44;
-  const w = innerWidth, h = innerHeight - barH;
+  const w = innerWidth, h = innerHeight - topInset();
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return [w, h];
@@ -673,7 +1202,8 @@ function pill(x, y, w, h, label, color) {
 }
 
 // ---------- pixel art: vẽ lên canvas nhỏ (1 đơn vị game = 16 điểm ảnh) rồi phóng nguyên số nguyên ----------
-const U = 16, MX = 16, MY = 28;             // MX/MY: lề trái / lề trên của sàn trong khung nhỏ
+const U = 16;
+let MX = 16, MY = 28, HX = 0, lastTick = 0;             // MX/MY: lề trái / lề trên của sàn trong khung nhỏ
 const PL = {
   night: "#0d2a38", water1: "#14485a", water2: "#1c6676", foam: "#5fc4c4",
   wood1: "#a8703c", wood2: "#8d5a2e", wood3: "#6e4422", rim: "#4a2b14", rim2: "#2e1a0c",
@@ -683,7 +1213,16 @@ const PL = {
   fur: "#d9a466", furD: "#a9743c", ear: "#6e4422",
   fire: "#ff8a1f", fireY: "#ffd23f", green: "#7bd66b", steam: "#e9f2f0", metal: "#5a5f66", metalD: "#34383e",
 };
-const lo = document.createElement("canvas"), g = lo.getContext("2d");
+const lo = document.createElement("canvas");
+let g = lo.getContext("2d");
+const LAYERS = {}, BTNS = [], MOUSE = { x: -99, y: -99, down: false };
+// lớp tĩnh vẽ một lần rồi chép lại
+function layer(name, key, fn) {
+  let L = LAYERS[name];
+  if (!L) L = LAYERS[name] = { cv: document.createElement("canvas"), key: null };
+  if (L.key !== key) { L.cv.width = LW; L.cv.height = LH; const prev = g; g = L.cv.getContext("2d"); fn(); g = prev; L.key = key; }
+  g.drawImage(L.cv, 0, 0);
+}
 let GX = 16, GZ = 10, LW = 288, LH = 214, SC = 3, OX = 0, OY = 0, ov = [];
 const lx = (x) => Math.round(MX + x * U), lz = (z) => Math.round(MY + (GZ - z) * U);
 function R(c, x, y, w, h) { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); }
@@ -905,11 +1444,54 @@ function drawDog(cx, cy, m, kind) {
   else if (m === "an") { R(PL.ink, cx - 3, cy + 7, 6, 2); R("#e8798c", cx - 2, cy + 8, 4, 1); R(PL.ink, cx - 6, cy + 1, 4, 1); R(PL.ink, cx + 2, cy + 1, 4, 1); }
   else R(PL.ink, cx - 3, cy + 8, 6, 1);
 }
-function drawCustomerPx(c, tb, ratio, t) {           // khách ngồi sau bàn (vẽ trước bàn)
-  const m = moodOf(c, ratio), cx = lx(tb.pos[0]), cy = lz(tb.pos[1]) - 25 + (m === "an" && (t >> 3 & 1) ? 1 : 0), kind = kindOf(c);
+function drawCustomerAt(c, cx, cy, m) {              // một khách ở vị trí bất kỳ (ngồi bàn, trên bè, đang đi)
   R("rgba(0,0,0,.25)", cx - 9, cy + 18, 18, 3);
+  const kind = kindOf(c);
   if (SPR[kind]) drawBlob(cx, cy, m, SPR[kind]); else drawDog(cx, cy, m, kind);
   if (m === "gian") { R(PL.ink, cx - 12, cy - 12, 1, 1); R("#e5493a", cx - 12, cy - 9, 3, 1); R("#e5493a", cx - 11, cy - 11, 1, 3); }
+}
+function drawCustomerPx(c, tb, ratio, t) {           // khách ngồi sau bàn (vẽ trước bàn)
+  const m = moodOf(c, ratio);
+  drawCustomerAt(c, lx(tb.pos[0]), lz(tb.pos[1]) - 25 + (m === "an" && (t >> 3 & 1) ? 1 : 0), m);
+}
+
+// ---------- khách chèo bè vào quán: bè trượt từ ngoài sông tới mạn, khách nhảy lên sàn rồi đi tới bàn ----------
+const ARR = {};                                        // id khách -> { t0, side } (chỉ ở phía client, không đụng luật)
+const ARR_RIDE = 1500, ARR_HOP = 300, ARR_WALK = 1300, ARR_SEATED = ARR_RIDE + ARR_HOP + ARR_WALK;
+const ease = (u) => u * u * (3 - 2 * u);
+function arrivalOf(c, tb, now) {
+  if (!ARR[c.id]) ARR[c.id] = { t0: now, side: tb.pos[0] < GX / 2 ? -1 : 1 };
+  return ARR[c.id];
+}
+function drawRaft(rx, ry, dir, t, alpha) {
+  g.globalAlpha = alpha;
+  R("rgba(0,0,0,.25)", rx - 12, ry + 4, 26, 3);
+  R(PL.rim2, rx - 13, ry - 1, 26, 6);
+  for (let i = 0; i < 4; i++) { R(i % 2 ? PL.wood1 : "#b07a44", rx - 12, ry, 24, 1 + (i === 0 ? 0 : 0)); }
+  R("#b07a44", rx - 12, ry, 24, 2); R(PL.wood1, rx - 12, ry + 2, 24, 2); R(PL.wood3, rx - 12, ry + 4, 24, 1);
+  for (let x = -9; x <= 9; x += 6) R(PL.rim2, rx + x, ry, 1, 4);                    // khe tre
+  R(PL.rim2, rx - 14, ry + 1, 2, 3); R(PL.rim2, rx + 12, ry + 1, 2, 3);            // đầu bè cong
+  for (let k = 0; k < 5; k++) pxl(PL.foam, rx + dir * (15 + k * 3), ry + 5 + ((k + (t >> 3)) & 1));   // vệt nước phía sau
+  g.globalAlpha = 1;
+}
+function drawArrival(c, tb, a, el, ratio, t) {
+  const seatX = lx(tb.pos[0]), seatY = lz(tb.pos[1]) - 25, dir = a.side;
+  const W2 = GX * U, dockX = dir < 0 ? MX - 17 : MX + W2 + 17, entryX = dir < 0 ? MX + 8 : MX + W2 - 8, startX = dir < 0 ? -28 : LW + 28;
+  const m = moodOf(c, ratio);
+  let cx, cy = seatY, ride = false;
+  if (el < ARR_RIDE) { ride = true; cx = Math.round(startX + (dockX - startX) * ease(el / ARR_RIDE)); cy = seatY + 2 + (((t >> 4) & 1) ? 0 : 1); }
+  else if (el < ARR_RIDE + ARR_HOP) { const u = (el - ARR_RIDE) / ARR_HOP; cx = Math.round(dockX + (entryX - dockX) * u); cy = seatY - Math.round(9 * Math.sin(Math.PI * u)); }
+  else { const u = (el - ARR_RIDE - ARR_HOP) / ARR_WALK; cx = Math.round(entryX + (seatX - entryX) * u); cy = seatY - (((el / 130) | 0) & 1); }
+  const drift = Math.max(0, el - ARR_RIDE);                                          // bè rỗng trôi ra xa rồi biến mất
+  if (drift < 2400) {
+    const rx = ride ? cx : Math.round(dockX + dir * drift * 0.03);
+    drawRaft(rx, seatY + 20, dir, t, ride ? 1 : Math.max(0, 1 - drift / 2400));
+  }
+  drawCustomerAt(c, cx, cy, ride ? "vui" : m);
+  if (ride) {                                                                        // mái chèo
+    const sw = Math.round(Math.sin(t / 6) * 2), px0 = cx + 11 * -dir;
+    R(PL.wood3, px0, cy + 8, 1, 12); R(PL.wood1, px0 + sw - 1, cy + 19, 3, 2);
+  }
 }
 function drawBubblePx(c, tb, t) {                    // bong bóng gọi món: tối đa 3 món một hàng
   const orders = ordersOf(c);
@@ -933,12 +1515,153 @@ function patienceBarPx(tb, ratio) {
 
 // ---------- Út Sen: theo dõi hướng/đang đi từ snapshot ----------
 const pl = { x: null, z: null, face: "d", lastMove: 0 };
+const audioRun = { prevTick: -1, prevMode: null, prevSigs: [], prevFinished: false, custMoods: {}, lastStepAt: 0 };
+
+function panOfX(x) {
+  const b = ((snap && snap.meta && snap.meta.bounds) || { x: [0, 16] }).x;
+  const mid = (b[0] + b[1]) / 2, half = Math.max(1, (b[1] - b[0]) / 2);
+  return Math.max(-0.6, Math.min(0.6, ((x - mid) / half) * 0.55));
+}
+function panOfStove(id) {
+  const st = snap && (snap.stoves || []).find((s) => s.id === id);
+  return st ? panOfX(st.pos[0]) : 0;
+}
+function panOfTable(id) {
+  const tb = snap && (snap.tables || []).find((t) => t.id === id);
+  return tb ? panOfX(tb.pos[0]) : 0;
+}
+function panOfCustomer(cid) {
+  const cu = snap && (snap.customers || []).find((c) => c.id === cid);
+  return cu ? panOfTable(cu.table_id) : 0;
+}
+function playUiClick() {
+  if (window.QuanAudio) window.QuanAudio.playSfx("ui_click", { gain: 0.65 });
+}
+function handleQuanAudio(s) {
+  const QA = window.QuanAudio;
+  if (!QA || !s) return;
+  if (s.mode !== "quan") {
+    if (audioRun.prevMode === "quan") QA.setScene("off");
+    audioRun.prevMode = s.mode;
+    audioRun.prevTick = s.tick ?? -1;
+    audioRun.prevSigs = [];
+    audioRun.prevFinished = false;
+    audioRun.custMoods = {};
+    return;
+  }
+  const tick = s.tick ?? 0;
+  const reset = audioRun.prevMode !== "quan" || tick < audioRun.prevTick;
+  if (reset) {
+    audioRun.prevSigs = [];
+    audioRun.custMoods = {};
+    audioRun.prevFinished = false;
+  }
+  const currEvents = s.events || [];
+  const currSigs = currEvents.map((e) => JSON.stringify([e.tick, e.name, e.data || null]));
+  let newEvents = [];
+  if (reset && tick > 5) {
+    newEvents = [];
+  } else {
+    const prev = audioRun.prevSigs;
+    let overlap = 0;
+    const maxK = Math.min(prev.length, currSigs.length);
+    for (let k = maxK; k >= 1; k--) {
+      let ok = true;
+      for (let i = 0; i < k; i++) {
+        if (prev[prev.length - k + i] !== currSigs[i]) { ok = false; break; }
+      }
+      if (ok) { overlap = k; break; }
+    }
+    newEvents = currEvents.slice(overlap);
+  }
+  audioRun.prevSigs = currSigs;
+  audioRun.prevTick = tick;
+  audioRun.prevMode = "quan";
+
+  newEvents.forEach((ev) => {
+    const d = ev.data || {};
+    switch (ev.name) {
+      case "customer_arrived":
+        QA.playSfx("customer_arrive", { pan: panOfTable(d.table_id) });
+        break;
+      case "cook_started": {
+        const st = (s.stoves || []).find((x) => x.id === d.stove_id);
+        const isFridge = (st && st.serves === "coca") || d.dish_id === "coca";
+        QA.playSfx(isFridge ? "fridge_open" : "cook_start", { pan: panOfStove(d.stove_id) });
+        break;
+      }
+      case "dish_ready":
+        QA.playSfx("dish_ready", { pan: panOfStove(d.stove_id) });
+        break;
+      case "dish_picked":
+        QA.playSfx("dish_pickup", { pan: panOfStove(d.stove_id), jitter: 0.05 });
+        break;
+      case "served":
+        QA.playSfx("serve", { pan: panOfTable(d.table_id) });
+        break;
+      case "paid":
+        QA.playSfx(d.tip > 0 ? "coin_tip" : "coin_pay", { pan: panOfCustomer(d.customer_id), jitter: 0.04 });
+        break;
+      case "customer_left":
+        QA.playSfx("customer_leave", { pan: panOfCustomer(d.customer_id) });
+        break;
+      case "dish_wasted":
+        QA.playSfx("dish_waste", { pan: d.stove_id ? panOfStove(d.stove_id) : 0 });
+        break;
+      case "bought":
+        QA.playSfx("buy", { pan: 0.55, jitter: 0.05 });
+        break;
+      case "upgraded":
+        QA.playSfx("upgrade", { pan: 0 });
+        break;
+      case "buy_failed":
+      case "upgrade_failed":
+        QA.playSfx("error", { pan: 0 });
+        break;
+    }
+  });
+
+  const nextMoods = {};
+  let angryCount = 0;
+  const pDefault = ((s.meta || {}).patience_s || 60) * 60;
+  (s.customers || []).forEach((c) => {
+    const ratio = Math.max(0, Math.min(1, c.patience_ticks_left / (c.patience_max || pDefault)));
+    const m = moodOf(c, ratio);
+    nextMoods[c.id] = m;
+    if (c.state === "waiting" && m === "gian") {
+      angryCount++;
+      if (audioRun.custMoods[c.id] && audioRun.custMoods[c.id] !== "gian") {
+        QA.playSfx("customer_angry", { pan: panOfTable(c.table_id) });
+      }
+    }
+  });
+  audioRun.custMoods = nextMoods;
+
+  if (s.finished) {
+    QA.setScene("ended");
+    if (!audioRun.prevFinished) QA.playSfx("jingle_end", { gain: 0.88 });
+    audioRun.prevFinished = true;
+  } else {
+    audioRun.prevFinished = false;
+    const secLeft = (s.time_left_ticks || 0) / 60;
+    QA.setScene((secLeft > 0 && secLeft <= 25) || angryCount >= 2 ? "rush" : "night");
+  }
+}
+
 function trackPlayer() {
   const p = snap && snap.mode === "quan" && snap.player;
   if (!p || !p.pos) return;
   if (pl.x !== null) {
     const dx = p.pos[0] - pl.x, dz = p.pos[1] - pl.z;
-    if (Math.abs(dx) + Math.abs(dz) > 1e-4) { pl.lastMove = performance.now(); pl.face = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? "r" : "l") : (dz > 0 ? "u" : "d"); }
+    if (Math.abs(dx) + Math.abs(dz) > 1e-4) {
+      const now = performance.now();
+      pl.lastMove = now;
+      pl.face = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? "r" : "l") : (dz > 0 ? "u" : "d");
+      if (window.QuanAudio && !snap.finished && now - audioRun.lastStepAt >= 230) {
+        audioRun.lastStepAt = now;
+        window.QuanAudio.playSfx("step_wood", { pan: panOfX(p.pos[0]), gain: 0.36, jitter: 0.08, cooldownMs: 200 });
+      }
+    }
   }
   pl.x = p.pos[0]; pl.z = p.pos[1];
 }
@@ -963,18 +1686,25 @@ function drawPlayerPx(p, near, t) {
   playerHit = { x: OX + (x - 10) * SC, y: OY + (y - 24) * SC, w: 20 * SC, h: 28 * SC };
 }
 
-function drawQuanScene(w, h, top, bottom, t) {
-  const meta = snap.meta || {}, stock = snap.stock || {};
+function drawQuanScene(w, h, t) {
+  const meta = snap.meta || {}, stock = snap.stock || {}, now = performance.now();
   const b = meta.bounds || { x: [0, 16], z: [0, 10] };
-  GX = b.x[1]; GZ = b.z[1]; LW = GX * U + 2 * MX; LH = GZ * U + MY + 26;
+  GX = b.x[1]; GZ = b.z[1];
+  const BW = GX * U, BH = GZ * U;
+  // toàn màn hình: sông phủ hết, xuồng ở giữa; chọn tỉ lệ nguyên sao cho còn lề nước hai bên cho bè cập mạn
+  SC = Math.max(1, Math.floor(Math.min(w / (BW + 64), h / (BH + 28 + 14 + 16))));
+  LW = Math.ceil(w / SC); LH = Math.ceil(h / SC);
+  MX = Math.floor((LW - BW) / 2); MY = Math.max(28, Math.floor(26 + (LH - 14 - 26 - BH) / 2));
+  HX = Math.max(0, Math.floor((LW - 288) / 2));
+  OX = 0; OY = 0;
   if (lo.width !== LW || lo.height !== LH) { lo.width = LW; lo.height = LH; }
-  const availH = h - top - bottom;
-  SC = Math.max(1, Math.floor(Math.min(w / LW, availH / LH)));
-  OX = Math.floor((w - LW * SC) / 2); OY = top + Math.floor((availH - LH * SC) / 2);
   ov = []; vendorHit = null; playerHit = null;
+  if ((snap.tick || 0) < lastTick - 5) Object.keys(ARR).forEach((k) => delete ARR[k]);   // chơi lại -> xóa trạng thái đến
+  lastTick = snap.tick || 0;
+  const live = new Set((snap.customers || []).map((c) => c.id));
+  Object.keys(ARR).forEach((k) => { if (!live.has(k)) delete ARR[k]; });
 
   drawWater(t); drawDeck();
-  const BW = GX * U, BH = GZ * U;
   [[MX + 2, MY - 2], [MX + BW / 2, MY - 2], [MX + BW - 2, MY - 2], [MX + 2, MY + BH + 4], [MX + BW - 2, MY + BH + 4]].forEach(([x, y], i) => lanternPx(x, y, t + i * 17));
 
   const byTable = {};
@@ -1003,23 +1733,30 @@ function drawQuanScene(w, h, top, bottom, t) {
     const c = byTable[tb.id];
     items.push({ z: tb.pos[1] + 0.1, f: () => {
       const pm = c ? (c.patience_max || ((meta.patience_s || 60) * 60)) : 1, ratio = c ? Math.max(0, Math.min(1, c.patience_ticks_left / pm)) : 0;
-      if (c) drawCustomerPx(c, tb, ratio, t);
-      drawTablePx(tb, c);
-      if (c) { drawBubblePx(c, tb, t); if (c.state !== "eating") patienceBarPx(tb, ratio); }
+      const a = c ? arrivalOf(c, tb, now) : null, el = a ? now - a.t0 : 1e9;
+      if (c && el >= ARR_SEATED) {
+        drawCustomerPx(c, tb, ratio, t);
+        drawTablePx(tb, c);
+        drawBubblePx(c, tb, t); if (c.state !== "eating") patienceBarPx(tb, ratio);
+      } else {                                           // khách đang chèo bè / đi vào: bàn còn trống
+        drawTablePx(tb, null);
+        if (c) drawArrival(c, tb, a, el, ratio, t);
+      }
       ov.push(() => ptext(tb.id, lx(tb.pos[0]), lz(tb.pos[1]) + 5, { size: 4.6, color: "#fff2cf" }));
     } });
   });
   if (p) items.push({ z: p.pos[1], f: () => drawPlayerPx(p, near, t) });
   items.sort((a, b2) => b2.z - a.z).forEach((i) => i.f());
 
-  for (let y = 0; y < LH; y += 2) for (let x = 0; x < LW; x += 2) {   // tối nhẹ ở rìa
-    const d = Math.hypot(x - LW / 2, y - LH / 2) / Math.hypot(LW / 2, LH / 2);
-    if (d > 0.82 && ((x + y) & 3) === 0) pxl("rgba(5,15,22,.45)", x, y);
-  }
+  layer("vignette", LW + "x" + LH, () => {                          // tối nhẹ ở rìa màn hình
+    for (let y = 0; y < LH; y += 2) for (let x = 0; x < LW; x += 2) {
+      const d = Math.hypot(x - LW / 2, y - LH / 2) / Math.hypot(LW / 2, LH / 2);
+      if (d > 0.82 && ((x + y) & 3) === 0) pxl("rgba(5,15,22,.45)", x, y);
+    }
+  });
   drawHudLow(); hudText();
-  ctx.fillStyle = "#0b1a22"; ctx.fillRect(0, 0, w, h);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(lo, 0, 0, LW, LH, OX, OY, LW * SC, LH * SC);
+  ctx.drawImage(lo, 0, 0, LW, LH, 0, 0, LW * SC, LH * SC);
   ov.forEach((f) => f());
 }
 
@@ -1039,62 +1776,88 @@ function toastOf(e) {
     default: return null;
   }
 }
+// các nút trong game (thay thanh menu DOM ở chế độ quán): vẽ pixel, bấm bằng chuột
+const HUD_ICONS = {
+  audioOn: ["...#....", ".###.#..", "####...#", "####.#..", "####...#", ".###.#..", "...#....", "........"],
+  audioOff: ["...#....", ".###....", "####.#.#", "####..#.", "####.#.#", ".###....", "...#....", "........"],
+  rules: [".##..##.", "#..##..#", "#.#..#.#", "#.#..#.#", "#.#..#.#", "#.#..#.#", ".######.", "........"],
+  upg: ["...##...", "..####..", ".######.", "...##...", "...##...", "...##...", "...##...", "........"],
+  next: ["##......", "####....", "######..", "#######.", "######..", "####....", "##......", "........"],
+  retry: ["..####..", ".#....#.", "#.....##", "#....###", "#.......", ".#.....#", "..#####.", "........"],
+  new: ["#....##.", "#...###.", "#..####.", "#.######", "#..####.", "#...###.", "#....##.", "........"],
+};
+function drawIcon(pat, x, y, color) { pat.forEach((row, j) => { for (let i = 0; i < 8; i++) if (row[i] === "#") pxl(color, x + i, y + j); }); }
 function drawHudLow() {
   R(PL.rim2, 0, 0, LW, 24); R(PL.rim, 0, 0, LW, 22); R(PL.wood2, 0, 0, LW, 20); R(PL.wood1, 0, 0, LW, 2);
   for (let x = 0; x < LW; x += 24) R(PL.wood3, x, 2, 1, 18);
-  R(PL.ink, 6, 4, 12, 12); R("#fff6d8", 7, 5, 10, 10); R(PL.ink, 11, 7, 1, 4); R(PL.ink, 11, 10, 3, 1);                      // đồng hồ
-  R(PL.ink, 66, 4, 12, 12); R("#f2c230", 67, 5, 10, 10); R("#ffe27a", 68, 6, 3, 3); R("#b8861a", 71, 8, 1, 5);              // đồng xu
+  R(PL.ink, HX + 6, 4, 12, 12); R("#fff6d8", HX + 7, 5, 10, 10); R(PL.ink, HX + 11, 7, 1, 4); R(PL.ink, HX + 11, 10, 3, 1);                      // đồng hồ
+  R(PL.ink, HX + 66, 4, 12, 12); R("#f2c230", HX + 67, 5, 10, 10); R("#ffe27a", HX + 68, 6, 3, 3); R("#b8861a", HX + 71, 8, 1, 5);              // đồng xu
   const rep = snap.reputation ?? 0, rmax = (snap.meta || {}).reputation_max || 5;
-  for (let i = 0; i < rmax; i++) {                                                                                           // sao uy tín
-    const x = 150 + i * 13, full = rep >= i + 1, half = !full && rep > i + 0.25;
+  for (let i = 0; i < rmax; i++) {                                                                                                               // sao uy tín
+    const x = HX + 150 + i * 13, full = rep >= i + 1, half = !full && rep > i + 0.25;
     R(PL.ink, x, 4, 12, 12); R(full ? "#ffd23f" : half ? "#d9b34a" : "#6e4a2a", x + 1, 5, 10, 10); R(full || half ? "#fff0a0" : "#8a6038", x + 2, 6, 2, 2);
     R(PL.ink, x + 5, 7, 2, 5); R(PL.ink, x + 3, 9, 6, 1);
   }
-  R(PL.rim2, 0, LH - 14, LW, 14); R(PL.rim, 0, LH - 13, LW, 13);                                                             // thanh kho
+  R(PL.rim2, 0, LH - 15, LW, 15); R(PL.rim, 0, LH - 14, LW, 14); R(PL.wood2, 0, LH - 14, LW, 1);                                                // thanh kho + nút
+  const audioMuted = !!(window.QuanAudio && window.QuanAudio.getState().muted);
+  const list = [
+    { id: "audio", icon: audioMuted ? "audioOff" : "audioOn", label: (audioMuted ? "Bật nhạc" : "Tắt nhạc") + " (M · phải: âm lượng)", on: true },
+    { id: "rules", label: "Luật chơi", on: true },
+    { id: "upg", label: "Nâng cấp", on: !!snap.upgrades },
+    { id: "next", label: "Ngày tiếp theo", on: snap.day !== undefined, enabled: !!(snap.finished && snap.reason === "time") },
+    { id: "retry", label: "Làm lại", on: true },
+    { id: "new", label: "Chơi lại từ đầu", on: snap.day !== undefined },
+  ].filter((b) => b.on);
+  BTNS.length = 0;
+  list.forEach((b, i) => {
+    const x = HX + 288 - 6 - (list.length - i) * 15 + 1, y = LH - 13, enabled = b.enabled !== false;
+    const hover = enabled && MOUSE.x >= x && MOUSE.x < x + 13 && MOUSE.y >= y && MOUSE.y < y + 12, down = hover && MOUSE.down;
+    BTNS.push({ id: b.id, x, y, w: 13, h: 12, enabled });
+    R(PL.ink, x, y, 13, 12);
+    R(enabled ? (hover ? "#d9a45e" : "#b9824a") : "#6e5a44", x + 1, y + 1, 11, 10);
+    R(enabled ? "#f0c488" : "#8a7458", x + 1, y + 1, 11, 1); R(PL.wood3, x + 1, y + 10, 11, 1);                                                    // viền sáng / tối
+    drawIcon(HUD_ICONS[b.icon || b.id], x + 2, y + 2 + (down ? 1 : 0), enabled ? "#fff2cf" : "#a8957a");
+    if (hover) ov.push(() => {
+      ctx.font = "bold " + 5 * SC + "px 'Courier New', monospace";
+      const tw = ctx.measureText(b.label).width + 6 * SC, tx = Math.min(LW * SC - tw - 2, Math.max(2, (x + 6) * SC - tw / 2)), ty = (y - 12) * SC;
+      ctx.fillStyle = "#1a0e06"; ctx.fillRect(tx - SC, ty - SC, tw + 2 * SC, 10 * SC); ctx.fillStyle = "#fff6d8"; ctx.fillRect(tx, ty, tw, 8 * SC);
+      ctx.fillStyle = "#3a2416"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(b.label, tx + tw / 2, ty + 4.4 * SC);
+    });
+  });
 }
 function hudText() {
   const s = Math.ceil((snap.time_left_ticks || 0) / 60), stock = snap.stock || {};
   ov.push(() => {
-    ptext(Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"), 21, 10, { size: 8, align: "left", color: s <= 20 ? "#ff8a7a" : "#fff2cf" });
-    ptext((snap.money ?? 0) + "k", 81, 10, { size: 8, align: "left", color: "#ffe27a" });
-    if (snap.day !== undefined) ptext("NGÀY " + snap.day, 128, snap.next_customer_ticks !== undefined ? 6 : 10, { size: 5, color: "#ffe9b0" });
-    if (snap.next_customer_ticks !== undefined) {
-      ptext("KHÁCH " + Math.ceil(snap.next_customer_ticks / 60) + "s", 128, 14, { size: 4.5, color: "#e0c58f" });
-      const f = Math.max(0, Math.min(1, 1 - snap.next_customer_ticks / (snap.customer_interval_ticks || 900)));   // thanh khách đến (pixel)
-      const bx = OX + 160 * SC, by = OY + 11 * SC, bw = 52 * SC, bh = 6 * SC;
-      ctx.fillStyle = "#241410"; ctx.fillRect(bx - SC, by - SC, bw + 2 * SC, bh + 2 * SC);
-      ctx.fillStyle = "#4a2b14"; ctx.fillRect(bx, by, bw, bh);
-      ctx.fillStyle = f > 0.85 ? "#ffd23f" : "#e8933a"; ctx.fillRect(bx, by, Math.round(bw * f / SC) * SC, bh);
-      ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(bx, by, Math.round(bw * f / SC) * SC, SC);
-    }
-    ptext("ĐIỂM " + (snap.score ?? 0), 224, 10, { size: 7, align: "left", color: "#fff2cf" });
+    ptext(Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"), HX + 21, 10, { size: 8, align: "left", color: s <= 20 ? "#ff8a7a" : "#fff2cf" });
+    ptext((snap.money ?? 0) + "k", HX + 81, 10, { size: 8, align: "left", color: "#ffe27a" });
+    if (snap.day !== undefined) ptext("NGÀY " + snap.day, HX + 128, snap.next_customer_ticks !== undefined ? 6 : 10, { size: 5, color: "#ffe9b0" });
+    if (snap.next_customer_ticks !== undefined) ptext("KHÁCH " + Math.ceil(snap.next_customer_ticks / 60) + "s", HX + 128, 14, { size: 4.5, color: "#e0c58f" });
+    ptext("ĐIỂM " + (snap.score ?? 0), HX + 224, 10, { size: 7, align: "left", color: "#fff2cf" });
     const kho = Object.keys(stock).map((k) => (KHO_NAME[k] || k) + " " + stock[k]).join(" · ");
-    ptext("KHO  " + (kho || "(trống — bấm ông Hai để mua)"), 6, LH - 7, { size: 5, align: "left", color: "#ffe9b0", bold: true });
-    ptext("WASD · E", LW - 6, LH - 7, { size: 5, align: "right", color: "#e0c58f" });
+    ptext("KHO  " + (kho || "(trống — bấm ông Hai để mua)"), HX + 6, LH - 7, { size: 4.4, align: "left", color: "#ffe9b0", bold: true });
     const seen = new Set(), msgs = [];
     (snap.events || []).forEach((e) => { const m = e.tick >= (snap.tick || 0) - 150 ? toastOf(e) : null, k = e.tick + e.name; if (m && !seen.has(k)) { seen.add(k); msgs.push([m, e.tick]); } });
-    msgs.slice(-3).forEach(([m, tk], i, a) => ptext(m, LW / 2, 29 + i * 9, { size: 6.5, color: (snap.tick || 0) - tk > 110 ? "rgba(255,242,207,.5)" : "#fff2cf" }));
+    msgs.slice(-3).forEach(([m, tk], i) => ptext(m, LW / 2, 29 + i * 9, { size: 6.5, color: (snap.tick || 0) - tk > 110 ? "rgba(255,242,207,.5)" : "#fff2cf" }));
     if (snap.finished) {
-      ctx.fillStyle = "rgba(10,20,26,.7)"; ctx.fillRect(OX, OY + 70 * SC, LW * SC, 60 * SC);
-      ptext("KẾT CA" + (snap.day !== undefined ? " · NGÀY " + snap.day : ""), LW / 2, 90, { size: 14, color: "#ffd23f" });
-      ptext((snap.money ?? 0) + "k · uy tín " + rep1() + " · điểm " + (snap.score ?? 0), LW / 2, 108, { size: 7, color: "#fff2cf" });
-      const next = snap.day !== undefined && snap.reason === "time";
-      showEndBtn(true, next ? "Ngày tiếp theo" : "Làm lại", next ? "next" : "retry", OX + LW * SC / 2, 44 + OY + 117 * SC);
-    } else showEndBtn(false);
+      const cy0 = Math.floor(LH / 2);
+      ctx.fillStyle = "rgba(10,20,26,.7)"; ctx.fillRect(0, (cy0 - 30) * SC, LW * SC, 60 * SC);
+      ptext("KẾT CA" + (snap.day !== undefined ? " · NGÀY " + snap.day : ""), LW / 2, cy0 - 20, { size: 14, color: "#ffd23f" });
+      ptext((snap.money ?? 0) + "k · uy tín " + (snap.reputation ?? 0).toFixed(1) + " · điểm " + (snap.score ?? 0), LW / 2, cy0 - 2, { size: 7, color: "#fff2cf" });
+      ptext(snap.day !== undefined && snap.reason === "time" ? "Bấm nút ▶ để sang ngày kế tiếp" : "Bấm nút ↻ để chơi lại", LW / 2, cy0 + 10, { size: 6, color: "#e0c58f" });
+    }
   });
 }
-function rep1() { return (snap.reputation ?? 0).toFixed(1); }
+
 
 function drawQuan(w, h) {
-  drawQuanScene(w, h, 0, 0, snap.tick || 0);
+  drawQuanScene(w, h, snap.tick || 0);
   updateShop();
   updateUpg();
 }
 
 // ----- cửa hàng ông Hai (DOM, kiểu pixel) -----
 const shopEl = document.createElement("div");
-shopEl.className = "pxm";
-shopEl.style.cssText = "position:fixed;right:16px;top:70px;width:290px;display:none;z-index:5";
+shopEl.style.cssText = "position:fixed;right:16px;top:120px;width:260px;background:#fff8e1;color:#4e342e;border:3px solid #8d6e63;border-radius:16px;padding:12px;font:14px system-ui;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:5";
 document.body.appendChild(shopEl);
 function updateShop() {
   const v = snap && snap.vendor;
@@ -1125,7 +1888,7 @@ function hitVendor(e) {
   const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
   return x >= vendorHit.x && x <= vendorHit.x + vendorHit.w && y >= vendorHit.y && y <= vendorHit.y + vendorHit.h;
 }
-cv.addEventListener("click", (e) => { if (hitVendor(e)) { shopOpen = !shopOpen; shopSig = ""; updateShop(); } });
+cv.addEventListener("click", (e) => { if (hitVendor(e)) { playUiClick(); shopOpen = !shopOpen; shopSig = ""; updateShop(); } });
 cv.addEventListener("mousemove", (e) => { cv.style.cursor = hitVendor(e) ? "pointer" : "default"; });
 addEventListener("keydown", (e) => { if (e.key === "Escape") { shopOpen = false; updateShop(); } });
 
@@ -1164,7 +1927,7 @@ function hitPlayer(e) {
   return x >= playerHit.x && x <= playerHit.x + playerHit.w && y >= playerHit.y && y <= playerHit.y + playerHit.h;
 }
 function toggleUpg() { upgOpen = !upgOpen; upgSig = ""; updateUpg(); }
-cv.addEventListener("click", (e) => { if (hitPlayer(e)) toggleUpg(); });
+cv.addEventListener("click", (e) => { if (hitPlayer(e)) { playUiClick(); toggleUpg(); } });
 cv.addEventListener("mousemove", (e) => { if (hitPlayer(e)) cv.style.cursor = "pointer"; });
 addEventListener("keydown", (e) => { if (e.key === "Escape") { upgOpen = false; updateUpg(); } });
 
@@ -1191,26 +1954,50 @@ function showRules(on) {
   }
 }
 function postRestart(body) {
+  playUiClick();
   fetch("/restart", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
   lastSent = ""; down.clear(); shopOpen = false; upgOpen = false;
+  audioRun.prevSigs = []; audioRun.custMoods = {}; audioRun.prevFinished = false;
 }
-document.querySelectorAll("img[data-ic]").forEach((im) => { const c = sprCanvas(im.dataset.ic); if (c) im.src = c.toDataURL(); });
-document.getElementById("btnRules").onclick = () => showRules(rulesEl.style.display !== "block");
-document.getElementById("btnUpg").onclick = toggleUpg;
+document.getElementById("btnRules").onclick = () => { playUiClick(); showRules(rulesEl.style.display !== "block"); };
+document.getElementById("btnUpg").onclick = () => { playUiClick(); toggleUpg(); };
 document.getElementById("btnNext").onclick = () => postRestart({ next: true });
 document.getElementById("btnRetry").onclick = () => postRestart({});
 document.getElementById("btnNew").onclick = () => postRestart({ new: true });
-// nút ngay trên thông báo kết ca: "Ngày tiếp theo" (hết giờ) hoặc "Làm lại"
-const endBtn = document.createElement("button");
-endBtn.className = "pxb";
-endBtn.style.cssText = "position:fixed;z-index:8;display:none;transform:translateX(-50%);font-size:16px;padding:6px 18px";
-document.body.appendChild(endBtn);
-endBtn.onclick = () => postRestart(endBtn.dataset.act === "next" ? { next: true } : {});
-function showEndBtn(on, label, act, x, y) {
-  if (!on) { endBtn.style.display = "none"; return; }
-  endBtn.style.display = "block"; endBtn.textContent = label; endBtn.dataset.act = act;
-  endBtn.style.left = Math.round(x) + "px"; endBtn.style.top = Math.round(y) + "px";
-}
+
+// ---------- điều khiển âm thanh ----------
+(function setupAudioUi() {
+  const QA = window.QuanAudio;
+  const btnAudio = document.getElementById("btnAudio");
+  const btnCfg = document.getElementById("btnAudioCfg");
+  const panel = document.getElementById("audioPanel");
+  const volBgm = document.getElementById("volBgm");
+  const volAmb = document.getElementById("volAmb");
+  const volSfx = document.getElementById("volSfx");
+  if (!QA) { btnAudio.style.display = btnCfg.style.display = "none"; return; }
+  function renderAudioUi(st) {
+    btnAudio.textContent = st.muted ? "🔇 Nhạc: Tắt" : (st.unlocked ? "🔊 Nhạc: Bật" : "🔊 Bật nhạc");
+    volBgm.value = Math.round(st.bgmVol * 100);
+    volAmb.value = Math.round(st.ambVol * 100);
+    volSfx.value = Math.round(st.sfxVol * 100);
+  }
+  QA.onStateChange(renderAudioUi);
+  renderAudioUi(QA.getState());
+  btnAudio.onclick = () => {
+    const muted = QA.toggleMute();
+    if (!muted) playUiClick();
+  };
+  btnCfg.onclick = () => {
+    QA.unlock();
+    playUiClick();
+    panel.style.display = panel.style.display === "block" ? "none" : "block";
+  };
+  document.getElementById("btnAudioClose").onclick = () => { playUiClick(); panel.style.display = "none"; };
+  document.getElementById("btnAudioTest").onclick = () => { QA.unlock(); QA.playSfx("dish_ready"); };
+  volBgm.oninput = () => QA.setVolume("bgm", volBgm.value / 100);
+  volAmb.oninput = () => QA.setVolume("ambience", volAmb.value / 100);
+  volSfx.oninput = () => QA.setVolume("sfx", volSfx.value / 100);
+})();
 let rulesShownOnce = false;
 function updateMenu() {
   if (!snap) return;
@@ -1244,8 +2031,42 @@ function updateMenu() {
   }
 }
 
+function lowXY(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / SC, (e.clientY - r.top) / SC]; }
+function btnAt(e) {
+  if (!snap || snap.mode !== "quan") return null;
+  const [x, y] = lowXY(e);
+  return BTNS.find((b) => b.enabled && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) || null;
+}
+cv.addEventListener("mousemove", (e) => { const [x, y] = lowXY(e); MOUSE.x = x; MOUSE.y = y; if (btnAt(e)) cv.style.cursor = "pointer"; });
+cv.addEventListener("mouseleave", () => { MOUSE.x = MOUSE.y = -99; MOUSE.down = false; });
+cv.addEventListener("mousedown", () => { MOUSE.down = true; });
+addEventListener("mouseup", () => { MOUSE.down = false; });
+cv.addEventListener("click", (e) => {
+  const b = btnAt(e);
+  if (!b) return;
+  if (b.id === "audio") { if (window.QuanAudio && !window.QuanAudio.toggleMute()) playUiClick(); }
+  else if (b.id === "rules") { playUiClick(); showRules(rulesEl.style.display !== "block"); }
+  else if (b.id === "upg") { playUiClick(); toggleUpg(); }
+  else if (b.id === "next") postRestart({ next: true });
+  else if (b.id === "retry") postRestart({});
+  else if (b.id === "new") postRestart({ new: true });
+});
+cv.addEventListener("contextmenu", (e) => {
+  const b = btnAt(e);
+  if (b && b.id === "audio") {
+    e.preventDefault();
+    if (window.QuanAudio) window.QuanAudio.unlock();
+    playUiClick();
+    const p = document.getElementById("audioPanel");
+    p.style.display = p.style.display === "block" ? "none" : "block";
+  }
+});
+
 function frame() {
   requestAnimationFrame(frame);  // đặt trước để lỗi vẽ không làm dừng vòng lặp
+  const q = !!(snap && snap.mode === "quan");
+  document.getElementById("menubar").style.display = q ? "none" : "flex";
+  cv.style.marginTop = q ? "0" : "44px"; cv.style.height = q ? "100vh" : "calc(100vh - 44px)";
   const [w, h] = fit();
   ctx.fillStyle = "#10161c"; ctx.fillRect(0, 0, w, h);
   if (snap) {

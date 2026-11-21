@@ -1,0 +1,163 @@
+{
+  "date": "2026-11-21",
+  "tool": "built-in image_gen",
+  "reason_rejected": "User requested small flat pixels matching their repository canvas mock. Final assets were exported from code-native pixel drawings for exact palette, grid and animation consistency.",
+  "trials": [
+    {
+      "asset": "char/ut_sen_front.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Asset type: production pixel-art PNG game character, one sprite only.\nPrimary request: Ut Sen, an original cheerful human Vietnamese woman running a Mekong floating-market boat restaurant. Front-facing full body, slightly elevated top-down three-quarter camera. Tan skin, big expressive dark eyes, scruffy black hair and a small bun under a cream conical non la hat, turquoise ao ba ba blouse, red-and-cream checkered khan ran scarf, short worn ivory apron over dark plum trousers, simple sandals. Small charming grime details. Hands empty, alert friendly pose.\nStyle: authentic LOW RESOLUTION pixel art designed on a 24 by 32 logical pixel canvas, extremely chunky square pixels, approximately 18-color warm palette, dark plum pixel outline, no subpixel detail, no antialiasing, no blur, no gradients. Warm lantern highlights and dark teal shadows. The final game export is 96 by 128 pixels with each logical pixel enlarged exactly 4 times.\nComposition: single isolated sprite centered, entire hat and feet visible, about 2 logical pixels clear padding, feet aligned at bottom. No ground, no scenery, no letters, no watermark, no duplicates, no sprite sheet. GENUINELY TRANSPARENT background. Do not copy any existing game character.",
+      "accepted": false
+    },
+    {
+      "asset": "station/bep_idle.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. Subject: a squat old soot-blackened terracotta charcoal cookstove, chipped burnt-orange clay body with dark firebox, sturdy small feet, black iron pot with empty visible interior on top, small wooden handle, no fire, no steam. Design on a 32x32 logical pixel canvas, export128x128. Quiet unlit state. Readable simple chunky silhouette.",
+      "accepted": false
+    },
+    {
+      "asset": "customer/khach_1.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. Subject: an ORIGINAL friendly scruffy brown boatman dog wearing a faded ochre fisherman's cap, indigo ao ba ba shirt, cream-and-red checkered scarf, brown shorts and sandals. Oversized shaggy face, floppy ears and expressive waiting eyes. Full body seated pose, hands resting on knees, no chair or props, front-facing with top of head slightly visible. Keep both feet visible. Native24x32, export96x128, large chunky pixels. This is a new Vietnamese market customer, not a character from any other game.",
+      "accepted": false
+    },
+    {
+      "asset": "dish/ca_loc_nuong_trui.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. Subject: one whole Vietnamese grilled snakehead fish, long dark golden slightly charred body, clear fish head and tail, lying diagonally on a vivid folded green banana leaf serving platter. Tiny golden grill marks, a few scallion pixels. No bowl, no other food or props. Top-down three-quarter, compact readable icon on a 16x16 logical pixel canvas, export64x64. Large simple pixel clusters.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_back.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the character identity and pixel-art style reference. Create ONE matching game sprite of the SAME human Ut Sen viewed directly FROM BEHIND. Keep the exact cream conical hat, black hair bun, red cream checked scarf, turquoise blouse, cream apron waist ties visible at back, plum trousers, sandals, same proportions, warm palette and chunky pixels. Full body standing, both hands empty. Slightly elevated camera, same scale and bottom alignment. Native24x32, export96x128. Actual transparent background, no scenery, no text, no sprite sheet. Show the back of the head and hat, no face or eyes.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_side.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the character identity and pixel-art style reference. Create ONE matching game sprite of the SAME human Ut Sen in a clear RIGHT-FACING SIDE PROFILE, nose points RIGHT. Exact cream conical hat, black hair bun, red cream checkered scarf, turquoise blouse, stained cream apron, plum trousers, sandals, identical cute proportions, palette and chunky square pixels. Full body standing at rest with empty hands, slightly elevated camera, entire hat and feet visible. Native24x32, export96x128. Genuinely transparent background, no scenery, no text, no sprite sheet.",
+      "accepted": false
+    },
+    {
+      "asset": "station/bep_cooking.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: precise-object-edit. Edit reference image 1 into the COOKING state of this SAME stove. Keep the terracotta stove body, black pot, handle, proportions, silhouette, exact position, framing, wear marks and pixel style unchanged. Add chunky orange fire in the firebox, bubbling broth inside the pot, a small plume of cream pixel steam above. Maintain dark plum outline and warm palette. One isolated sprite, transparent background, no text, no scenery, no sprite sheet. Native32x32, export128x128.",
+      "accepted": false
+    },
+    {
+      "asset": "station/bep_ready.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: precise-object-edit. Edit reference image 1 into the READY state of the SAME stove. Keep the terracotta body, black pot, handle, proportions, scale, position, wear and pixel style unchanged. The pot contains a finished golden broth with green herbs, lid tilted open on the rim, small bright green pixel sparkle near the rim indicating ready. Fire reduced to embers. No surrounding glow cloud. One isolated sprite, genuine transparent background, no text, no scenery, no sprite sheet. Native32x32, export128x128.",
+      "accepted": false
+    },
+    {
+      "asset": "customer/khach_2.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. Subject: original anthropomorphic elderly cream-and-ginger CAT fruit seller woman at a Vietnamese floating market. Big expressive triangular-eared cat head, tiny round spectacles, raspberry rose ao ba ba blouse, dark plum trousers, cream checkered head scarf tied on top, a small leaf in scarf. Full body seated with paws on knees, both sandal-clad feet visible, slightly bored PATIENTLY WAITING expression, closed mouth and watchful eyes. No chair or props, no fruit basket. Front-facing, slightly elevated top-down three-quarter. Native24x32, export96x128.",
+      "accepted": false
+    },
+    {
+      "asset": "env/san_xuong.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. One production pixel-art game background asset: a LARGE EMPTY Mekong restaurant BOAT DECK seen from directly overhead with slight view of the lower boat side, wide horizontal 16:10 composition. Warm amber weathered wooden plank floor filling a broad rectangular playable area, softly tapered ends, low dark wooden gunwale border, tiny rope and rivet details at edges only, golden lantern light patches in the four corners. EMPTY uninterrupted walkable floor with space for a cooking station at lower left and tables on right. NO furniture, no lantern objects, no stove, no tables, no people, no lettering, no roof, no water, no background. Genuine transparent area outside boat silhouette. Chunky low-resolution pixel art, dark plum outlines, warm sienna brown wood, teal shadow, 256x160 native pixel canvas enlarged4x to1024x640, no blur or antialiasing.",
+      "accepted": false
+    },
+    {
+      "asset": "env/nuoc_tile.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. A perfectly SEAMLESS REPEATING square water-texture tile for a top-down pixel-art Mekong floating market game at night. Entire square filled edge-to-edge with deep dark teal water, sparse short horizontal cyan teal pixel ripple strokes and a FEW tiny golden amber reflections of lanterns. Calm dark water, subtle low contrast so foreground sprites read clearly. Matching opposite edges, toroidal tile, no visible border, NO objects, no boat, no land, no plants, no characters, no text. Native64x64 logical pixels enlarged4x to256x256, chunky square pixels, limited12-color palette, no gradients, no antialiasing, no blur. OPAQUE background.",
+      "accepted": false
+    },
+    {
+      "asset": "station/ban.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. Subject: one empty small round worn wooden restaurant table with two low wooden stools tucked to its lower-left and upper-right. A slightly crooked hand-built Vietnamese boat cafe furniture set. Overhead three-quarter camera so tabletop is a broad horizontal oval, warm brown plank grain, dark plum outlines, visible short table legs, small chips and scratches, no dishes, no cloth, no characters. Native32x32, export128x128, simple readable clusters.",
+      "accepted": false
+    },
+    {
+      "asset": "item/bong_sung.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. IMPORTANT: design as a SIMPLE readable 16x16 native-pixel inventory icon, final64x64. Use FEW LARGE clusters and broad shapes, maximum16 main colors, no fine detailing. Subject: One fresh edible Mekong WATER LILY blossom, large pink-magenta and mauve pointed petals, golden yellow center and a short green stem with one leaf. Clear flower silhouette, no pot, no water, no vase.",
+      "accepted": false
+    },
+    {
+      "asset": "item/ca_loc.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. IMPORTANT: design as a SIMPLE readable 16x16 native-pixel inventory icon, final64x64. Use FEW LARGE clusters and broad shapes, maximum16 main colors, no fine detailing. Subject: One fresh raw snakehead fish viewed from the side, elongated olive-grey body, large blunt fish head with one bright eye on the LEFT, tapered tail on the RIGHT, small dark fins. Slightly curved horizontal silhouette. No plate, no garnish, no water.",
+      "accepted": false
+    },
+    {
+      "asset": "dish/goi_bong_sung.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. IMPORTANT: design as a SIMPLE readable 16x16 native-pixel inventory icon, final64x64. Use FEW LARGE clusters and broad shapes, maximum16 main colors, no fine detailing. Subject: A chipped small ivory ceramic BOWL filled with Vietnamese water-lily-stem salad: pale cream and lilac thin stems, a few magenta water-lily petals and green herb pixels, tiny orange accents. One compact bowl viewed from slightly above, readable colorful food silhouette. No chopsticks or other props.",
+      "accepted": false
+    },
+    {
+      "asset": "dish/lau_ca_linh_dien_dien.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. IMPORTANT: design as a SIMPLE readable 16x16 native-pixel inventory icon, final64x64. Use FEW LARGE clusters and broad shapes, maximum16 main colors, no fine detailing. Subject: A squat small black iron HOTPOT with two side handles filled with golden broth, little silver fish, bright yellow dien dien blossoms and green herbs. One curl of chunky pale steam above. No stove or table. Simple readable dark pot and yellow food silhouette viewed from slightly above.",
+      "accepted": false
+    },
+    {
+      "asset": "item/bong_dien_dien.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. IMPORTANT: design as a SIMPLE readable 16x16 native-pixel inventory icon, final64x64. Use FEW LARGE clusters and broad shapes, maximum16 main colors, no fine detailing. Subject: A small bunch of fresh edible Vietnamese dien dien flowers, bright GOLDEN YELLOW clustered narrow petals attached to a few green stems and small green leaves. Broad flower silhouette, unmistakably yellow, no pot or vase.",
+      "accepted": false
+    },
+    {
+      "asset": "item/ca_linh.png",
+      "stage": "initial_detailed",
+      "prompt": "Use case: stylized-concept. Production pixel-art PNG asset for an original Vietnamese Mekong floating-market boat restaurant at night. Top-down three-quarter view, cute scruffy expressive slightly absurd handmade feeling. Chunky crisp square pixels, dark plum outlines, limited bright-but-warm palette, teal shadows and amber lantern highlights, tiny wear details. Very low native resolution, no antialiasing, no blur, no gradients, no text, no watermark, no ground or scenery, no duplicates or sprite sheet. A single complete object, centered with clear padding. Genuinely transparent background. IMPORTANT: design as a SIMPLE readable 16x16 native-pixel inventory icon, final64x64. Use FEW LARGE clusters and broad shapes, maximum16 main colors, no fine detailing. Subject: A compact group of THREE little raw silver ca linh fish, overlapping diagonally like a small market catch. Shiny pale silver bodies with teal shadows, dark single-pixel eyes and clear small forked tails. No dish, no net, no water.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_front.png",
+      "stage": "simplified_trial",
+      "prompt": "Use case: stylized-concept. Create ONE very tiny SIMPLE pixel-art cook sprite for a Vietnamese restaurant game. STYLE REFERENCE: among the 3 recent images, use ONLY the USER'S GAME SCREENSHOT with wooden boat, simple square animal customers and a tiny cook. Ignore the detailed fish and food icons. Match the tiny cook's simplicity closely. Ut Sen is a HUMAN woman: wide straw-yellow triangular conical hat, a tiny peach square face, two single-pixel dark eyes, turquoise short-sleeve shirt, plain ivory apron with a single tan square patch, dark brown trousers, tiny shoes. Facing FRONT, standing still, empty hands. Make the whole person from ONLY about 14 pixels wide by 22 pixels tall: big solid flat-color pixel rectangles with a one-pixel dark-brown outline. Max 10 colors; NO texture, NO shading gradients, NO folds, NO hair strands, NO fingers, NO high-resolution detail. A simple retro browser game sprite, as minimal as a 16-bit NPC. Full body, centered, crisp square pixel edges, no scenery, no text, no shadow, true transparent background. This is a style replacement for the previous overly detailed character.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_back.png",
+      "stage": "simplified_motion_trial",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the EXACT approved tiny simple pixel cook. Keep the SAME human Ut Sen, straw triangular hat, tiny peach face, single-pixel eyes, turquoise shirt, plain ivory apron with one tan patch, brown trousers, tiny shoes, same silhouette scale and anchor. Only14x22 logical pixels, at most10 flat colors, large solid square blocks. NO fine details, NO gradients, NO texture. One isolated full-body sprite on genuine transparent background, no text, no shadow, no environment, no sheet. Pose: Turn her to face directly AWAY FROM THE VIEWER, rear view. Plain dark hair rectangle under hat, apron ties behind, no face or eyes visible. Standing still, hands empty.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_side.png",
+      "stage": "simplified_motion_trial",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the EXACT approved tiny simple pixel cook. Keep the SAME human Ut Sen, straw triangular hat, tiny peach face, single-pixel eyes, turquoise shirt, plain ivory apron with one tan patch, brown trousers, tiny shoes, same silhouette scale and anchor. Only14x22 logical pixels, at most10 flat colors, large solid square blocks. NO fine details, NO gradients, NO texture. One isolated full-body sprite on genuine transparent background, no text, no shadow, no environment, no sheet. Pose: Turn her to face RIGHT in a clear side profile, nose to the right, one single-pixel eye. Standing still, hands empty.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_walk_front_2.png",
+      "stage": "simplified_motion_trial",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the EXACT approved tiny simple pixel cook. Keep the SAME human Ut Sen, straw triangular hat, tiny peach face, single-pixel eyes, turquoise shirt, plain ivory apron with one tan patch, brown trousers, tiny shoes, same silhouette scale and anchor. Only14x22 logical pixels, at most10 flat colors, large solid square blocks. NO fine details, NO gradients, NO texture. One isolated full-body sprite on genuine transparent background, no text, no shadow, no environment, no sheet. Pose: Keep facing FRONT. Walking frame B: her RIGHT foot steps FORWARD and her left foot back, opposite arm swing. Opposite stride to frame A. Keep hat and torso fixed, no bobbing.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_walk_front_1.png",
+      "stage": "simplified_motion_trial",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the EXACT approved tiny simple pixel cook. Keep the SAME human Ut Sen, straw triangular hat, tiny peach face, single-pixel eyes, turquoise shirt, plain ivory apron with one tan patch, brown trousers, tiny shoes, same silhouette scale and anchor. Only14x22 logical pixels, at most10 flat colors, large solid square blocks. NO fine details, NO gradients, NO texture. One isolated full-body sprite on genuine transparent background, no text, no shadow, no environment, no sheet. Pose: Keep facing FRONT. Walking frame A: her LEFT foot steps FORWARD and her right foot back, opposite arm swing. Use a clear 1-to-2 logical pixel change in legs, keep hat and torso fixed.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_cam_do_back.png",
+      "stage": "simplified_motion_trial",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the EXACT approved tiny simple pixel cook. Keep the SAME human Ut Sen, straw triangular hat, tiny peach face, single-pixel eyes, turquoise shirt, plain ivory apron with one tan patch, brown trousers, tiny shoes, same silhouette scale and anchor. Only14x22 logical pixels, at most10 flat colors, large solid square blocks. NO fine details, NO gradients, NO texture. One isolated full-body sprite on genuine transparent background, no text, no shadow, no environment, no sheet. Pose: Turn to face AWAY, rear view. BOTH arms bent in front of her carrying a plain empty bowl (mostly hidden by body from this rear angle). No face or eyes visible. Standing still.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_cam_do_side.png",
+      "stage": "simplified_motion_trial",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the EXACT approved tiny simple pixel cook. Keep the SAME human Ut Sen, straw triangular hat, tiny peach face, single-pixel eyes, turquoise shirt, plain ivory apron with one tan patch, brown trousers, tiny shoes, same silhouette scale and anchor. Only14x22 logical pixels, at most10 flat colors, large solid square blocks. NO fine details, NO gradients, NO texture. One isolated full-body sprite on genuine transparent background, no text, no shadow, no environment, no sheet. Pose: Turn to face RIGHT in clear side profile. BOTH arms extended slightly forward at waist carrying a plain EMPTY IVORY BOWL. No food. Standing still.",
+      "accepted": false
+    },
+    {
+      "asset": "char/ut_sen_cam_do.png",
+      "stage": "simplified_motion_trial",
+      "prompt": "Use case: identity-preserve. Reference image 1 is the EXACT approved tiny simple pixel cook. Keep the SAME human Ut Sen, straw triangular hat, tiny peach face, single-pixel eyes, turquoise shirt, plain ivory apron with one tan patch, brown trousers, tiny shoes, same silhouette scale and anchor. Only14x22 logical pixels, at most10 flat colors, large solid square blocks. NO fine details, NO gradients, NO texture. One isolated full-body sprite on genuine transparent background, no text, no shadow, no environment, no sheet. Pose: Keep facing FRONT. BOTH arms bent forward at waist to carry a plain EMPTY IVORY BOWL held horizontally. Bowl contains no food; game will draw food on top. Standing still.",
+      "accepted": false
+    }
+  ]
+}

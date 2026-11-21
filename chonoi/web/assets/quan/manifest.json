@@ -1,0 +1,1099 @@
+{
+  "scale": 4,
+  "style": "small_flat_pixel_canvas_mock",
+  "assets": [
+    {
+      "path": "char/ut_sen_back.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "c13eb83e776ec11d6d4b51434a0593d520ed4e80d3cfe13c87be316ed789d617",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_front.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "9d5f14300033751b134abcb3592a163fb45582b973fc056fdad5171cb207ecb6",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_side.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "17f17de556ebe15c0b1ff3df39b61fad6f7c5953654a762130119a7f8d05db2e",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "customer/khach_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "24f7ef960f3a9f50dce3ad5de187dbd0556017bed2e93e02d8cf2d0a11549246",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "7d61175e29858c8292a704a5279f4b00d4bc07de304792e13d02b31ff54ee96f",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "dish/ca_loc_nuong_trui.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "c5f532bad2d6ff047bb0b81a6d3c9f9c32eadb01eca2bc6e0ce0603f3c69a183"
+    },
+    {
+      "path": "dish/goi_bong_sung.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "dedb28f5770272b08a2133a46055809eef7e85923c9f5c5ff431d68248bf1318"
+    },
+    {
+      "path": "dish/lau_ca_linh_dien_dien.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "3e46b444bbf5f80de44c4f3dfdac633f3918619ab87bba49ddb6413cc0d7bb87"
+    },
+    {
+      "path": "env/nuoc_tile.png",
+      "width": 256,
+      "height": 256,
+      "priority": "P0",
+      "opaque": true,
+      "sha256": "0c348947f25a42bdc82f1e753af989faf2f6ee3e6443d04a48eecb5e9978f71f"
+    },
+    {
+      "path": "env/san_xuong.png",
+      "width": 1024,
+      "height": 640,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "a6af86b78ccb7f5636e9c696c4c3b238bfccaf722e99d499f67a65bff6fb0e95"
+    },
+    {
+      "path": "item/bong_dien_dien.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "4b22a12bbb1475689813818cc5e6da96c7dbbbd2b6d97ad6332e3e9f847f934f"
+    },
+    {
+      "path": "item/bong_sung.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "1f5cac973ebfb9090deaea4da5b931f47e77df027f0d9d0544c16f655fa60851"
+    },
+    {
+      "path": "item/ca_linh.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "03c04648c73d36318c1ba4083e49b90db586ee1ae35b74227402735065164e8c"
+    },
+    {
+      "path": "item/ca_loc.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "37cc31295846e14886cd9b1b64466c92f64c00630d1f9d1fcb15943aedca191d"
+    },
+    {
+      "path": "station/ban.png",
+      "width": 128,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "f5acf72040b6ee5bc260254a6039dff8f132dab4d116e3b280076e1b79d53626"
+    },
+    {
+      "path": "station/bep_cooking.png",
+      "width": 128,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "1f49a7882ee004f35b879d099e1a39f8024375c258a58a2525f1bc2ca843fd10"
+    },
+    {
+      "path": "station/bep_idle.png",
+      "width": 128,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "ae717e0d2dec6678866ab9219f37d2f95f658a737298c45757dbb0c0f769de93"
+    },
+    {
+      "path": "station/bep_ready.png",
+      "width": 128,
+      "height": 128,
+      "priority": "P0",
+      "opaque": false,
+      "sha256": "00694949f7b61db15d3f6f1d2c0b4e7baf65ec263c1ed808f172695cdd26648a"
+    },
+    {
+      "path": "char/ut_sen_cam_do.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ce2c8dac7de9c54c1a2956af92d06ad77cea1bc18ae9253f6fb6630e67174824",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_back.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "aa8fb7124770cd5d31a223a2c8d049c1440e3581c2418543af888ae0bd7ca1bb",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_left.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "062611cad2ffea4ea72fe57ced16b3b2465fd170fee0bcbdac3493a16ae8ec13",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_side.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ae0ef5839c62a3049a77adb80af28596a4e74e99408457c3ee4f894b532d3123",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_back_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "aa8fb7124770cd5d31a223a2c8d049c1440e3581c2418543af888ae0bd7ca1bb",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_back_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "0f97c6eea257e7ec8f0d539c0210e0b1014a132e5fdaaef0bc78ec0dd84cbb85",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_front_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ce2c8dac7de9c54c1a2956af92d06ad77cea1bc18ae9253f6fb6630e67174824",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_front_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "e6e6c841ff7e7408a8efb414779270efcc352324e416f478a4baa4602aefcdb4",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_left_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "062611cad2ffea4ea72fe57ced16b3b2465fd170fee0bcbdac3493a16ae8ec13",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_left_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "c84bf415fc112249c412253cbea9bcdbfb77820948c7e2eb81b6ac46ac6ef137",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_side_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ae0ef5839c62a3049a77adb80af28596a4e74e99408457c3ee4f894b532d3123",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_cam_do_walk_side_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "178a9457f09bfb6931024466119398ee993d3e8f5039114de92bc2a03c7df98e",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_left.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "e380e490df0d46c7849f450676aaf6a3d86cc94be9aa95e9702b089b4ca7ee8b",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_back_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "c13eb83e776ec11d6d4b51434a0593d520ed4e80d3cfe13c87be316ed789d617",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_back_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "49d73918e8b52e555653ed917df81901beebc03813c3b145d1cf3d573bf84190",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_front_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "9d5f14300033751b134abcb3592a163fb45582b973fc056fdad5171cb207ecb6",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_front_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "89c10b6685572b1fbb5b0e2b18aed85a204f6f8ae66867c2b6f77a75de166619",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_left_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "e380e490df0d46c7849f450676aaf6a3d86cc94be9aa95e9702b089b4ca7ee8b",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_left_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "1de2ee67f52728c05cff4bde5ae1b3da6456721c4af344baeeaef769379b9ada",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_side_1.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "17f17de556ebe15c0b1ff3df39b61fad6f7c5953654a762130119a7f8d05db2e",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "char/ut_sen_walk_side_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "800f32afb3a9644c3504306f35efbb3c5be99137cab7d7b30a7efb717b35e8b7",
+      "anchor": [
+        48,
+        124
+      ]
+    },
+    {
+      "path": "customer/khach_1_an.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "07f0f214e0f3975b1eaca6522c04ce8f9b972f572c97beb63b4d032ad55cc5b4",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_1_an_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "567136df20ef0b5b5512f4f7cf43d27a89c5bdf5ede56a1ba68ecbd3094b2ce0",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_1_gian.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "83689dbb6dc1dcfaf9e53aa7c54247286ed290297fd5ed6c424dfa4d10cc16d6",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_1_vui.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "cc244575920bc0e3cdd94f8cfee078d5ab1d4a722f5499dd4c221200ee24f1be",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_2_an.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "a1c1a1ede7f63017c4481e604711d226a4671219203c73ca9450f8ad7c66a873",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_2_an_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "7f32ab43bb760b320cd805d4c896182d8684600a183b525a30cc2f1e456371b5",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_2_gian.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "2fd864e77afcbfbf5872b5a5715b2faedc27595636c1e225c402f01a9fbd7ea0",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_2_vui.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "8f4fb2eba87a039e2e60b37dbe89ca80c9fed8ee475a89fa27fc7c35aca22078",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_3.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "f1c93f0c72914335226b1ccef37f0ae159272e688c10c7c55ed899176d040267",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_3_an.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ec72f351e1cdbb67c159bf753bdbad056c6e0b71f9a87a861d7b58a797672c52",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_3_an_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "e2aaffc454185556df822e24c7e5e5093382eb587f1f3d70bf8da3be13fbc03a",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_3_gian.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "c153322f992225437b7f3212313640f004d5c0356f66a9f93c8d19d1873c22a0",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_3_vui.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "2fdec7270977650755f819464fb4762fc9c6212866ace3ca0b95939a41495d13",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_4.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "e3031a5d1787bbe0bef64c1a994b60df6254cd8c6bd80dc1078d414c953fe7cd",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_4_an.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "f7b9e1e122915a207024c5490ed6f8ca85678f35513da3b49a4420c49cc9510b",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_4_an_2.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "4399b19e1b1b4465053982d4d4ba8e3bb8bfa0329889949314b97871b28a7ba7",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_4_gian.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "b49dda2e4badec27f71dc6e7669b0b747761e4fbc0f2107aaab2dbb9a92e3145",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "customer/khach_4_vui.png",
+      "width": 96,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "32fc438ef8ce05eafe0025ad9d298224b9bec5574356ffb5dc29f44cc3580e94",
+      "anchor": [
+        48,
+        128
+      ]
+    },
+    {
+      "path": "env/den_long.png",
+      "width": 64,
+      "height": 96,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "404a43d1a968391b3ed16b57cb03181aa75f4aa55e3078677cc58ebe5dd01b90"
+    },
+    {
+      "path": "env/den_long_2.png",
+      "width": 64,
+      "height": 96,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "4907dacec6c50d32ee4d10c18709cc48d6da6c45a7b66c5391463154bfe4b6f4"
+    },
+    {
+      "path": "env/trang_tri_1.png",
+      "width": 96,
+      "height": 96,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "0f7377a0b5fac7cd3a8b7407183d449a2e8f8c077588b470292341056291a174"
+    },
+    {
+      "path": "env/trang_tri_2.png",
+      "width": 96,
+      "height": 96,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "2eb01202dd7e2279f73767e8dd7250e0a1c5b587569d0ffb6669821f68e7ac53"
+    },
+    {
+      "path": "station/bep_cooking_2.png",
+      "width": 128,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "c42f50a199f14f8266fd497bdb8e02b6e4bc0227a0e91937ab88fc91e4ee6bcf"
+    },
+    {
+      "path": "station/bep_cooking_3.png",
+      "width": 128,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "6991f892876d7a374f758da7ea9de8999e1976632f9dbd46309ade3b5242a7b5"
+    },
+    {
+      "path": "station/bep_ready_2.png",
+      "width": 128,
+      "height": 128,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "1d1715e47e21baad66730cc8ddb70a49f550c25b023f81b20396ba90f15679f1"
+    },
+    {
+      "path": "ui/bong_bong_dat_mon.png",
+      "width": 96,
+      "height": 96,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "267532c0b64296812c7a950d2ce070e9fd018286b69b5339fdd8d156e7570247"
+    },
+    {
+      "path": "ui/dong_ho.png",
+      "width": 48,
+      "height": 48,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ba377b61a1bcd82dd00caaa1b5207f43f9acafdc14e66a6d078b5b4a3d49fdeb"
+    },
+    {
+      "path": "ui/dong_xu.png",
+      "width": 48,
+      "height": 48,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ce6bea1b07e7f536b685bc916cedfac052e1aa400d3244434f27dfb0140d3a48"
+    },
+    {
+      "path": "ui/emote_doi.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "4e1d1194d807f7b00d17f945c95c92c307d982559b23274856dc7b8c4eeac0ff"
+    },
+    {
+      "path": "ui/emote_gian.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "c2f72295b0efeb741f458f0460599c1293929226dd2e7708a8ba25fa0db236f9"
+    },
+    {
+      "path": "ui/emote_vui.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "50e532a05187b29c0acc7e41f5e01a6b717cc8aa9b672aadd7ab439ab73d4d6c"
+    },
+    {
+      "path": "ui/khung_hud.png",
+      "width": 512,
+      "height": 96,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "748b333556c139b69288fa2479df76e9449fa0702dd9bd34f854f5869e39df07"
+    },
+    {
+      "path": "ui/phim_e.png",
+      "width": 48,
+      "height": 48,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "ee918ff7159fae97f37553f679b76627c51168c926382aca38d4dd0f0bfe839e"
+    },
+    {
+      "path": "ui/sao_uy_tin.png",
+      "width": 48,
+      "height": 48,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "dd54eddcb8dfb328c0c3ef7e44a67513760c8686ac759a0b70cebfcafa3268f1"
+    },
+    {
+      "path": "ui/sao_uy_tin_rong.png",
+      "width": 48,
+      "height": 48,
+      "priority": "P1",
+      "opaque": false,
+      "sha256": "849379aee2210444cf4dc635930b28381af61f09a0b7db46b3ee21b8852ddeb9"
+    },
+    {
+      "path": "env/nuoc_tile_2.png",
+      "width": 256,
+      "height": 256,
+      "priority": "P2",
+      "opaque": true,
+      "sha256": "c9b6d96b9cce5e40dcaa092e61a2b78378a8c88be9b2c656c6267af8293872fd"
+    },
+    {
+      "path": "env/nuoc_tile_3.png",
+      "width": 256,
+      "height": 256,
+      "priority": "P2",
+      "opaque": true,
+      "sha256": "f31de206d23870ec42296a5131574953fc59fbf46e77c9c88d3c8d007f379a86"
+    },
+    {
+      "path": "env/xuong_khach.png",
+      "width": 192,
+      "height": 96,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "5e233c78e887dbc34191fe1eb69380a7f5547eb56a308e8c8130ab00db87b007"
+    },
+    {
+      "path": "fx/khoi.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "6aa056c4e39c563a48706983b8b28839ecf7c7f66a92ac660910dcc790841c6f"
+    },
+    {
+      "path": "fx/khoi_2.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "f7853babeda91628b93033ca064eb18a6e9c51b8d453e24d47ef421cfcc40640"
+    },
+    {
+      "path": "fx/khoi_3.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "762b631647523247c4f2d470e696aa5bab7b736a657ad557ad8aee6831f02427"
+    },
+    {
+      "path": "fx/lua.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "73589e7c02659c1f014b49c3cfbfad0a147a7292b9f283e33ecf4be8c2ff6f9f"
+    },
+    {
+      "path": "fx/lua_2.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "73c0f512d94f1b82ffde4e0653d5c05bfd0e9db530889f436f817c8b58a38f48"
+    },
+    {
+      "path": "fx/lua_3.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "875cf881e9febe2766367c2699db32002ada50a1f7a083a7a5e90108f6bc7c09"
+    },
+    {
+      "path": "fx/nuoc_bat.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "78df35764787bd01e713fe9878bef73519b9f1e450743e68639ac98c85b163b8"
+    },
+    {
+      "path": "fx/nuoc_bat_2.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "df0210b7be1f559731a1e10cf3b7ed0d48997bbdce17d84bceb38de5b347a108"
+    },
+    {
+      "path": "fx/nuoc_bat_3.png",
+      "width": 64,
+      "height": 64,
+      "priority": "P2",
+      "opaque": false,
+      "sha256": "558e74a1526ff868b6820e2e0c54da20a3e5f2eebb72c1d0c63ed5fed12a41fe"
+    },
+    {
+      "path": "ui/man_ket_thuc.png",
+      "width": 800,
+      "height": 450,
+      "priority": "P2",
+      "opaque": true,
+      "sha256": "d626ef5896d5bbaedb8b55400601f0fc0d7bc59bed8d4d0294e31224a87a779a"
+    }
+  ],
+  "animations": {
+    "water": {
+      "frames": [
+        "env/nuoc_tile.png",
+        "env/nuoc_tile_2.png",
+        "env/nuoc_tile_3.png"
+      ],
+      "frame_ms": 200,
+      "loop": true
+    },
+    "ut_sen.idle.front": {
+      "frames": [
+        "char/ut_sen_front.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.walk.front": {
+      "frames": [
+        "char/ut_sen_walk_front_1.png",
+        "char/ut_sen_walk_front_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_idle.front": {
+      "frames": [
+        "char/ut_sen_cam_do.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_walk.front": {
+      "frames": [
+        "char/ut_sen_cam_do_walk_front_1.png",
+        "char/ut_sen_cam_do_walk_front_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.idle.back": {
+      "frames": [
+        "char/ut_sen_back.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.walk.back": {
+      "frames": [
+        "char/ut_sen_walk_back_1.png",
+        "char/ut_sen_walk_back_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_idle.back": {
+      "frames": [
+        "char/ut_sen_cam_do_back.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_walk.back": {
+      "frames": [
+        "char/ut_sen_cam_do_walk_back_1.png",
+        "char/ut_sen_cam_do_walk_back_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.idle.side": {
+      "frames": [
+        "char/ut_sen_side.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.walk.side": {
+      "frames": [
+        "char/ut_sen_walk_side_1.png",
+        "char/ut_sen_walk_side_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_idle.side": {
+      "frames": [
+        "char/ut_sen_cam_do_side.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_walk.side": {
+      "frames": [
+        "char/ut_sen_cam_do_walk_side_1.png",
+        "char/ut_sen_cam_do_walk_side_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.idle.left": {
+      "frames": [
+        "char/ut_sen_left.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.walk.left": {
+      "frames": [
+        "char/ut_sen_walk_left_1.png",
+        "char/ut_sen_walk_left_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_idle.left": {
+      "frames": [
+        "char/ut_sen_cam_do_left.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "ut_sen.carry_walk.left": {
+      "frames": [
+        "char/ut_sen_cam_do_walk_left_1.png",
+        "char/ut_sen_cam_do_walk_left_2.png"
+      ],
+      "frame_ms": 125,
+      "loop": true
+    },
+    "stove.cooking": {
+      "frames": [
+        "station/bep_cooking.png",
+        "station/bep_cooking_2.png",
+        "station/bep_cooking_3.png"
+      ],
+      "frame_ms": 150,
+      "loop": true
+    },
+    "stove.ready": {
+      "frames": [
+        "station/bep_ready.png",
+        "station/bep_ready_2.png"
+      ],
+      "frame_ms": 150,
+      "loop": true
+    },
+    "customer.1.eat": {
+      "frames": [
+        "customer/khach_1_an.png",
+        "customer/khach_1_an_2.png"
+      ],
+      "frame_ms": 220,
+      "loop": true
+    },
+    "customer.2.eat": {
+      "frames": [
+        "customer/khach_2_an.png",
+        "customer/khach_2_an_2.png"
+      ],
+      "frame_ms": 220,
+      "loop": true
+    },
+    "customer.3.eat": {
+      "frames": [
+        "customer/khach_3_an.png",
+        "customer/khach_3_an_2.png"
+      ],
+      "frame_ms": 220,
+      "loop": true
+    },
+    "customer.4.eat": {
+      "frames": [
+        "customer/khach_4_an.png",
+        "customer/khach_4_an_2.png"
+      ],
+      "frame_ms": 220,
+      "loop": true
+    },
+    "lantern": {
+      "frames": [
+        "env/den_long.png",
+        "env/den_long_2.png"
+      ],
+      "frame_ms": 350,
+      "loop": true
+    },
+    "fx.khoi": {
+      "frames": [
+        "fx/khoi.png",
+        "fx/khoi_2.png",
+        "fx/khoi_3.png"
+      ],
+      "frame_ms": 140,
+      "loop": true
+    },
+    "fx.lua": {
+      "frames": [
+        "fx/lua.png",
+        "fx/lua_2.png",
+        "fx/lua_3.png"
+      ],
+      "frame_ms": 140,
+      "loop": true
+    },
+    "fx.nuoc_bat": {
+      "frames": [
+        "fx/nuoc_bat.png",
+        "fx/nuoc_bat_2.png",
+        "fx/nuoc_bat_3.png"
+      ],
+      "frame_ms": 140,
+      "loop": true
+    }
+  },
+  "hud_slice": [
+    16,
+    20,
+    16,
+    20
+  ]
+}
