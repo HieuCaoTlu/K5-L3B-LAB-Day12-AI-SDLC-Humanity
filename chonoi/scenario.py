@@ -118,8 +118,9 @@ def _validate_gather(b, tuning):
     if "zero_oxy_ticks" in p:
         pos = p.get("pos", g["start_pos"])
         oxy = p.get("oxygen_ticks", omax)
-        if p["zero_oxy_ticks"] > 59:
-            raise BadInput("player.zero_oxy_ticks phải trong [0, 59]")
+        max_zero_oxy = int(g["choke_interval_ticks"]) - 1
+        if p["zero_oxy_ticks"] > max_zero_oxy:
+            raise BadInput(f"player.zero_oxy_ticks phải trong [0, {max_zero_oxy}]")
         if p["zero_oxy_ticks"] > 0 and not (oxy == 0 and pos[1] > g["surface_depth"]):
             raise BadInput("player.zero_oxy_ticks > 0 chỉ khi oxy = 0 và đang dưới nước")
     for n in b.get("nodes", []):
