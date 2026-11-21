@@ -11,7 +11,7 @@ import math
 
 from .ids import IdAllocator
 from .inputs import InputPlayer
-from .inventory import write_inventory
+from .inventory import counts_to_items, write_inventory, write_inventory_items
 from .jsonl import JsonlWriter
 from .rng import Streams
 from .sim.gather import GatherSim
@@ -71,7 +71,11 @@ class Session:
     def write_inventory_if_done(self, inventory_out):
         """File kho: ghi MỘT lần khi có gather_end; chưa kết thúc thì giữ nguyên file đích."""
         if self.mode == "gather" and self.sim.done and inventory_out:
-            write_inventory(inventory_out, self.sim.inventory_items())
+            items = self.sim.inventory_items()
+            if "freshness" in self.tuning:   # v1.2: file kho cá thể (gather chưa hao tươi thì hàng tươi 100)
+                write_inventory_items(inventory_out, counts_to_items(items) if isinstance(items, dict) else items)
+            else:
+                write_inventory(inventory_out, items)
 
 
 def run(mode, tuning, scenario, seed, frames, ticks, out_path, snapshot_every, inventory=None, inventory_out=None):

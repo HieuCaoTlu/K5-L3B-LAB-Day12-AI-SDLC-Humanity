@@ -8,7 +8,8 @@ from chonoi.inputs import InputState
 from chonoi.runner import Session
 from chonoi.scenario import load_scenario
 
-TUNING = load_contract()["tuning"]
+CONTRACT = load_contract()
+TUNING = {k: v for k, v in CONTRACT["tuning"].items() if k != "freshness"}   # regression P1-P2: số liệu v1.1 (kho đếm, không hao tươi)
 FULL = {"ca_loc": 9, "ca_linh": 9, "bong_dien_dien": 9, "bong_sung": 9, "ca_keo": 9, "keo_neo": 9}
 
 
@@ -25,8 +26,8 @@ def names(rows):
 
 class QuanP2(unittest.TestCase):
     def test_contract_v11_values(self):
-        c = load_contract()
-        self.assertEqual(c["contract_version"], "1.1")
+        c = CONTRACT
+        self.assertEqual(c["contract_version"], "1.2")   # đổi từ "1.1": Phase 3 bật độ tươi (khối freshness)
         self.assertEqual([s["id"] for s in TUNING["quan"]["stoves"]], ["B1", "B2"])
         self.assertEqual([t["id"] for t in TUNING["quan"]["tables"]], ["T1", "T2", "T3", "T4"])
         self.assertEqual(len(TUNING["menu"]), 6)

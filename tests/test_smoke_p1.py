@@ -225,7 +225,11 @@ class Integration(unittest.TestCase):
             code, err = run_headless("--mode", "quan", "--seed", "42", "--ticks", "0", "--inventory", inv,
                                      "--out", w.path("q.jsonl"))
             self.assertEqual(code, 0, err)
-            self.assertEqual(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"], {"bong_sung": 2, "ca_loc": 1})
+            # Phase 3: snapshot kho quán là mảng cá thể, khớp id, kind và độ tươi với file (smoke bàn giao của ticket)
+            got = snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"]
+            self.assertEqual([(x["id"], x["kind"]) for x in got], [(x["id"], x["kind"]) for x in saved["items"]])
+            for g_, f_ in zip(got, saved["items"]):                      # dung sai quan sát độ tươi ±0.01 (snapshot làm tròn 3 chữ số)
+                self.assertAlmostEqual(g_["fresh"], f_["fresh"], delta=0.01)
 
     def test_inv_01_not_written_when_tick_limit_first(self):
         with Workdir() as w:

@@ -1,45 +1,69 @@
-"""File kho v1.2 (Contract): {"items": [{"id": "I1", "kind": "ca_linh", "fresh": 100}, ...]}.
+"""File kho. Hai phiên bản (bên đọc chọn theo contract: có khối `freshness` ⇒ v1.2).
 
-Đọc: từ chối kho đếm kiểu cũ / sai schema / id trùng hoặc rỗng / kind lạ / fresh ngoài [0, 100] (BadInput -> mã 2).
-Ghi: sắp theo id, qua file tạm cùng thư mục rồi thay thế, byte-ổn-định.
+v1.0/v1.1 (Contract G): {"items": {kind: số nguyên >= 0}}  — kho đếm theo loại.
+v1.2 (Mùa Nước Nổi):    {"items": [{"id": "I1", "kind": "ca_linh", "fresh": 100}, ...]} — kho cá thể.
+
+Đọc: từ chối sai schema / kind lạ / số âm / id trùng / fresh ngoài [0,100] (BadInput -> mã 2).
+v1.2 từ chối file kho đếm (và ngược lại).
+Ghi: qua file tạm cùng thư mục rồi thay thế nguyên tử, byte-ổn-định.
+`fresh` đọc thành Fraction (chính xác, nhánh ở ngưỡng 30 không bị lệch); ghi làm tròn 6 chữ số thập phân.
 """
 
 import json
 import math
 import os
 import tempfile
+from fractions import Fraction
 
 from .errors import BadInput
-from .ids import sort_by_id
+from .ids import id_key, sort_by_id
 
-KINDS_P1 = ("ca_loc", "ca_linh", "bong_dien_dien", "bong_sung", "ca_keo", "keo_neo")
+KINDS_P1 = ("ca_loc", "ca_linh", "bong_dien_dien", "bong_sung", "ca_keo", "keo_neo")  # v1.1 thêm ca_keo, keo_neo
 
 
-def validate_items(items, kinds=KINDS_P1):
+def validate_count_items(items, kinds=KINDS_P1):
+    """v1.0/v1.1: kho đếm {kind: n}."""
+    if not isinstance(items, dict):
+        raise BadInput("items phải là object")
+    out = {}
+    for k, v in items.items():
+        if k not in kinds:
+            raise BadInput(f"nguyên liệu lạ: {k}")
+        if isinstance(v, bool) or not isinstance(v, int) or v < 0:
+            raise BadInput(f"số lượng không hợp lệ cho {k}: {v!r}")
+        if v > 0:
+            out[k] = v
+    return out
+
+
+def parse_fresh(v, where="fresh"):
+    """Số hữu hạn trong [0,100] -> Fraction (chính xác theo biểu diễn thập phân của số đã đọc)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or not (0 <= v <= 100):
+        raise BadInput(f"{where} phải là số hữu hạn trong [0, 100], đang là {v!r}")
+    return Fraction(str(v))
+
+
+def validate_item_list(items, kinds=KINDS_P1):
+    """Kho cá thể v1.2 -> list {id, kind, fresh: Fraction}. Sai schema / id trùng / kind lạ / fresh sai -> BadInput."""
     if not isinstance(items, list):
-        raise BadInput("items phải là mảng cá thể (v1.2)")
-    seen = set()
-    out = []
-    for it in items:
-        if not isinstance(it, dict) or set(it.keys()) != {"id", "kind", "fresh"}:
-            raise BadInput("mỗi cá thể trong items phải có đúng khóa id, kind, fresh")
-        iid = it["id"]
-        if not isinstance(iid, str) or not iid:
-            raise BadInput("id cá thể phải là chuỗi khác rỗng")
-        if iid in seen:
-            raise BadInput(f"id cá thể trùng: {iid}")
-        seen.add(iid)
-        kind = it["kind"]
-        if kind not in kinds:
-            raise BadInput(f"nguyên liệu lạ: {kind}")
-        fresh = it["fresh"]
-        if isinstance(fresh, bool) or not isinstance(fresh, (int, float)) or not math.isfinite(fresh) or not (0 <= fresh <= 100):
-            raise BadInput(f"độ tươi không hợp lệ cho {iid}: {fresh!r}")
-        out.append({"id": iid, "kind": kind, "fresh": fresh})
-    return sort_by_id(out)
+        raise BadInput("v1.2: items phải là mảng cá thể {id, kind, fresh}")
+    out, seen = [], set()
+    for i, it in enumerate(items):
+        if not isinstance(it, dict) or set(it) != {"id", "kind", "fresh"}:
+            raise BadInput(f"items[{i}] phải có đúng các khóa id, kind, fresh")
+        if not isinstance(it["id"], str) or not it["id"]:
+            raise BadInput(f"items[{i}].id phải là chuỗi khác rỗng")
+        if it["id"] in seen:
+            raise BadInput(f"id trùng: {it['id']}")
+        seen.add(it["id"])
+        if it["kind"] not in kinds:
+            raise BadInput(f"nguyên liệu lạ: {it['kind']}")
+        out.append({"id": it["id"], "kind": it["kind"], "fresh": parse_fresh(it["fresh"], f"items[{i}].fresh")})
+    return out
 
 
-def read_inventory(path: str, kinds=KINDS_P1) -> list:
+def read_inventory(path: str, kinds=KINDS_P1, fresh=False):
+    """fresh=False: dict đếm theo loại (v1.0/v1.1). fresh=True: list cá thể (v1.2)."""
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -47,24 +71,73 @@ def read_inventory(path: str, kinds=KINDS_P1) -> list:
         raise BadInput(f"không đọc được file kho {path}: {e}")
     if not isinstance(data, dict) or set(data.keys()) != {"items"}:
         raise BadInput("file kho chỉ được có khóa gốc 'items'")
-    return validate_items(data["items"], kinds)
+    if fresh:
+        return validate_item_list(data["items"], kinds)
+    return validate_count_items(data["items"], kinds)
 
 
-def hold_to_items(hold: list) -> list:
-    """Khoang (mảng cá thể theo thứ tự nhặt) -> mảng cá thể sắp theo id."""
-    return sort_by_id([{"id": it["id"], "kind": it["kind"], "fresh": it["fresh"]} for it in hold])
+def validate_items(items, kinds=KINDS_P1):
+    """v1.2: kho cá thể -> list {id, kind, fresh} sắp theo id (fresh giữ nguyên số đã đọc). Dùng cho scenario (hold, stock)."""
+    return sort_by_id([{"id": it["id"], "kind": it["kind"], "fresh": float(it["fresh"])}
+                       for it in validate_item_list(items, kinds)])
 
 
-def write_inventory(path: str, items: list):
-    items = sort_by_id([{"id": it["id"], "kind": it["kind"], "fresh": it["fresh"]} for it in items])
+def hold_to_items(hold: list):
+    """Giỏ -> kho xuất. Phần tử là cá thể {id, kind, fresh} (v1.2) -> mảng cá thể sắp theo id;
+    phần tử là chuỗi loại (v1.1) -> object đếm sắp theo loại."""
+    if hold and not isinstance(hold[0], str):
+        return sort_by_id([{"id": it["id"], "kind": it["kind"], "fresh": it["fresh"]} for it in hold])
+    if not hold:
+        return []
+    counts = {}
+    for k in hold:
+        counts[k] = counts.get(k, 0) + 1
+    return {k: counts[k] for k in sorted(counts)}
+
+
+def counts_to_items(counts: dict, start: int = 1) -> list:
+    """Kho đếm -> danh sách cá thể tươi 100, id I<start>.. (cầu nối khi gather chưa tự giữ cá thể; mất thứ tự nhặt)."""
+    out, n = [], start
+    for kind in sorted(counts):
+        for _ in range(int(counts[kind])):
+            out.append({"id": f"I{n}", "kind": kind, "fresh": 100})
+            n += 1
+    return out
+
+
+def item_to_json(it) -> dict:
+    """Cá thể (fresh có thể là Fraction/số) -> dạng JSON, fresh làm tròn 6 chữ số."""
+    return {"id": it["id"], "kind": it["kind"], "fresh": round(float(it["fresh"]), 6)}
+
+
+def items_to_json(items) -> list:
+    """Danh sách cá thể -> mảng JSON sắp theo id (F2 trước F10)."""
+    return [item_to_json(it) for it in sorted(items, key=lambda x: id_key(x["id"]))]
+
+
+def _atomic_write(path: str, obj):
     d = os.path.dirname(os.path.abspath(path))
     fd, tmp = tempfile.mkstemp(prefix=".inv-", suffix=".tmp", dir=d)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
-            json.dump({"items": items}, f, ensure_ascii=False, separators=(",", ":"))
+            json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
             f.write("\n")
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
+
+
+def write_inventory(path: str, items):
+    """Ghi kho: list cá thể (v1.2) hoặc dict đếm (v1.1)."""
+    if isinstance(items, list):
+        _atomic_write(path, {"items": items_to_json(items)})
+        return
+    items = {k: items[k] for k in sorted(items) if items[k] > 0}
+    _atomic_write(path, {"items": items})
+
+
+def write_inventory_items(path: str, items):
+    """v1.2: ghi kho cá thể (danh sách {id, kind, fresh}); ngất thì truyền [] -> {"items":[]}."""
+    _atomic_write(path, {"items": items_to_json(items)})
