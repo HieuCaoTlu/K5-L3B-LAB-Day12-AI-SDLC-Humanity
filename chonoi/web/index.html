@@ -42,9 +42,9 @@
   <button class="pxb" id="btnRules"><img data-ic="book" alt="">Luật chơi</button>
   <button class="pxb" id="btnUpg"><img data-ic="up" alt="">Nâng cấp</button>
   <button class="pxb" id="btnNext"><img data-ic="play" alt="">Ngày tiếp theo</button>
-  <button class="pxb" id="btnRetry"><img data-ic="retry" alt="">Làm lại</button>
   <button class="pxb" id="btnNew"><img data-ic="rewind" alt="">Chơi lại từ đầu</button>
 </div>
+<button class="pxb" id="btnRetry"><img data-ic="retry" alt="">Bắt đầu lại</button>
 <div id="rules" class="pxm"></div>
 <canvas id="c"></canvas>
 <script>
@@ -124,7 +124,8 @@ const kc = (k) => KIND_COLOR[k] || "#bbbbbb";
 
 function fit() {
   const dpr = window.devicePixelRatio || 1;
-  const w = innerWidth, h = innerHeight - 44;
+  const barH = document.getElementById("menubar").style.display === "none" ? 0 : 44;
+  const w = innerWidth, h = innerHeight - barH;
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return [w, h];
@@ -1215,9 +1216,32 @@ function updateMenu() {
   if (!snap) return;
   const multi = snap.day !== undefined;
   const bn = document.getElementById("btnNext"), bw = document.getElementById("btnNew");
+  const bu = document.getElementById("btnUpg"), br = document.getElementById("btnRetry");
+  const mb = document.getElementById("menubar");
   bn.style.display = bw.style.display = multi ? "" : "none";
   bn.disabled = !(snap.finished && snap.reason === "time");
-  document.getElementById("btnUpg").style.display = snap.upgrades ? "" : "none";
+  bu.style.display = snap.upgrades ? "" : "none";
+
+  const isGather = snap.mode !== "quan";
+  const showBar = !isGather || multi || Boolean(snap.upgrades);
+  mb.style.display = showBar ? "flex" : "none";
+  cv.style.marginTop = showBar ? "44px" : "0px";
+  cv.style.height = showBar ? "calc(100vh - 44px)" : "100vh";
+
+  if (isGather) {
+    const hpMax = (snap.player && snap.player.hp_max) ? snap.player.hp_max : 3;
+    br.style.position = "fixed";
+    br.style.left = (355 + hpMax * 26 + 8) + "px";
+    br.style.right = "";
+    br.style.top = (showBar ? 50 : 6) + "px";
+    br.style.zIndex = "11";
+  } else {
+    br.style.position = "fixed";
+    br.style.left = "";
+    br.style.right = "12px";
+    br.style.top = "6px";
+    br.style.zIndex = "11";
+  }
 }
 
 function frame() {
