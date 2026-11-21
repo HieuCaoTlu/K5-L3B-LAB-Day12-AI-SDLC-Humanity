@@ -108,12 +108,12 @@ class LiveGame:
                 self._args = ("quan", self.tuning, scen, self._seed + c["day"] - 1, _clone_stock(c["stock"]))
         else:
             self._args = (self.mode, self.tuning, self._scenario, self._seed, self._inventory)
-        self.session = Session(*self._args)
+        self.session = Session(*self._args, creative=True)
         if self.debug_stock and self.mode == "quan":
             self.session.sim.debug_full_stock = True
         self._after = 0
         self._ver += 1
-        self.inputs = LiveInputs()
+        self.inputs = LiveInputs(buttons=("interact", "catch", "sprint"))
         self.events = []
         self._saved = False
         self.error = None
@@ -198,7 +198,7 @@ class LiveGame:
             if not ok:
                 raise ValueError("move phải là [a, b] trong [-1, 1]")
         buttons = {}
-        for b in ("interact", "catch"):
+        for b in ("interact", "catch", "sprint"):
             if b in body:
                 if not isinstance(body[b], bool):
                     raise ValueError(f"{b} phải là boolean")

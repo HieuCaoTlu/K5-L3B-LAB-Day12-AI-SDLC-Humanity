@@ -3,6 +3,9 @@
 import json
 import unittest
 
+from chonoi.contract import load_contract
+from chonoi.inputs import InputState, LiveInputs
+from chonoi.runner import Session
 from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
 
 
@@ -670,6 +673,30 @@ class GatherPhase3Test(unittest.TestCase):
             self.assertEqual([(e["tick"], e["data"]["item_id"]) for e in sp], [(1, "I2"), (1, "I10")])
             i1 = next(it for it in snapshots(rows)[2]["hold"] if it["id"] == "I1")
             self.assertEqual(i1["fresh"], 0.0)
+
+
+class GatherCreativeSprintTest(unittest.TestCase):
+    def test_sprint_disabled_in_non_creative_mode(self):
+        tuning = load_contract()["tuning"]
+        speed = tuning["gather"]["swim_speed"]
+        sess = Session("gather", tuning, {"player": {"pos": [20, 10], "oxygen_ticks": 100}, "random_fish": False}, 1, creative=False)
+        for _ in range(10):
+            sess.step(InputState((1.0, 0.0), {"sprint": True}, set()))
+        snap = sess.snapshot()
+        self.assertAlmostEqual(snap["player"]["vel"][0], speed, places=3)
+        self.assertEqual(snap["player"]["oxygen_ticks"], 90)
+
+    def test_sprint_15x_speed_and_2x_oxygen_drain_in_creative_mode(self):
+        tuning = load_contract()["tuning"]
+        speed = tuning["gather"]["swim_speed"]
+        sess = Session("gather", tuning, {"player": {"pos": [20, 10], "oxygen_ticks": 100}, "random_fish": False}, 1, creative=True)
+        li = LiveInputs(buttons=("interact", "catch", "sprint"))
+        li.set(move=[1, 0], sprint=True)
+        for _ in range(10):
+            sess.step(li.advance())
+        snap = sess.snapshot()
+        self.assertAlmostEqual(snap["player"]["vel"][0], speed * 1.5, places=3)
+        self.assertEqual(snap["player"]["oxygen_ticks"], 80)
 
 
 if __name__ == "__main__":
